@@ -1,6 +1,5 @@
 import React from 'react';
-import { Target, Cpu, Activity, Zap } from 'lucide-react';
-import { IntentBar } from './IntentBar';
+import { Cpu, Activity, Zap } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const HeaderHero: React.FC = () => {
@@ -16,11 +15,6 @@ export const HeaderHero: React.FC = () => {
         
         {/* Floating Feature Badges */}
         <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300 backdrop-blur-md">
-            <Target className="h-3.5 w-3.5 text-indigo-400" />
-            <span>Adaptive Intent</span>
-          </div>
-
           <div className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300 backdrop-blur-md">
             <Cpu className="h-3.5 w-3.5 text-purple-400" />
             <span>AI-orchestrated</span>
@@ -38,13 +32,8 @@ export const HeaderHero: React.FC = () => {
         </h1>
 
         <p className="mx-auto mt-4 max-w-2xl text-sm md:text-base text-slate-400 leading-relaxed">
-          Type any objective or speak a goal. PRISM dynamically arranges task-specific telemetry, predictive intelligence, and operational pipelines in real-time.
+          Explore your workspace dashboards, operational telemetry, and predictive insights.
         </p>
-
-        {/* Central Intent Bar */}
-        <div className="mt-8">
-          <IntentBar />
-        </div>
 
       </div>
 
@@ -54,8 +43,7 @@ export const HeaderHero: React.FC = () => {
           
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-semibold text-white">Intent Engine:</span>
-            <span className="text-emerald-400">Active Synthesis</span>
+            <span className="text-emerald-400">Workspace Active</span>
           </div>
 
           <div className="flex items-center gap-2">
