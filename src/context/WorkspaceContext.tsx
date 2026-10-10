@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { IntentParseResult, LayoutPlan, PanelPlan } from '../types';
-import { processUserIntent, executePanelAction } from '../services/apiClient';
+import React, { createContext, useContext, useState } from 'react';
+import { ComponentMetadata, IntentParseResult, LayoutPlan, PanelPlan, WorkspaceDefinition } from '../types';
+import { executePanelAction, fetchWorkspaceComponents, processUserIntent } from '../services/apiClient';
 import { parseIntentInput, buildLayoutPlan } from '../services/intentEngine';
+import { COMPONENT_REGISTRY } from '../data/componentCatalog';
+import { WORKSPACES } from '../data/workspaces';
 
 interface Toast {
   id: string;
@@ -13,6 +15,9 @@ interface Toast {
 interface WorkspaceContextType {
   currentIntent: IntentParseResult;
   layoutPlan: LayoutPlan;
+  activeWorkspace: WorkspaceDefinition;
+  activeRegistry: Record<string, ComponentMetadata>;
+  isLoadingWorkspace: boolean;
   isAnalyzing: boolean;
   toasts: Toast[];
   pinnedIds: string[];
@@ -20,6 +25,7 @@ interface WorkspaceContextType {
   explainModalPanel: PanelPlan | null;
   showClarifyingModal: boolean;
   submitIntent: (input: string) => Promise<void>;
+  selectWorkspace: (workspace: WorkspaceDefinition) => Promise<void>;
   togglePinPanel: (instanceId: string) => void;
   undoLayout: () => void;
   resetLayout: () => void;
@@ -38,6 +44,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const [currentIntent, setCurrentIntent] = useState<IntentParseResult>(initialIntent);
   const [layoutPlan, setLayoutPlan] = useState<LayoutPlan>(initialLayout);
+  const [activeWorkspace, setActiveWorkspace] = useState<WorkspaceDefinition>(WORKSPACES[0]);
+  const [activeRegistry, setActiveRegistry] = useState<Record<string, ComponentMetadata>>(COMPONENT_REGISTRY);
+  const [isLoadingWorkspace, setIsLoadingWorkspace] = useState<boolean>(false);
   const [undoStack, setUndoStack] = useState<LayoutPlan[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
@@ -57,11 +66,31 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
+  const selectWorkspace = async (workspace: WorkspaceDefinition) => {
+    setIsLoadingWorkspace(true);
+    try {
+      const components = await fetchWorkspaceComponents(workspace.domain);
+      setActiveRegistry(components);
+      setActiveWorkspace(workspace);
+      addToast('Workspace Connected', `Loaded components for ${workspace.name}.`, 'success');
+    } catch (err) {
+      console.error('Failed to load workspace components:', err);
+      addToast('Workspace Error', `Failed to load components for ${workspace.name}.`, 'warning');
+    } finally {
+      setIsLoadingWorkspace(false);
+    }
+  };
+
   const submitIntent = async (input: string) => {
     if (!input.trim()) return;
     setIsAnalyzing(true);
     try {
-      const { intent, layout } = await processUserIntent(input, layoutPlan);
+      const { intent, layout } = await processUserIntent(
+        input,
+        layoutPlan,
+        activeWorkspace,
+        activeRegistry
+      );
 
       // Save current layout to undo stack
       setUndoStack((prev) => [layoutPlan, ...prev].slice(0, 5));
@@ -157,6 +186,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       value={{
         currentIntent,
         layoutPlan,
+        activeWorkspace,
+        activeRegistry,
+        isLoadingWorkspace,
         isAnalyzing,
         toasts,
         pinnedIds,
@@ -164,6 +196,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         explainModalPanel,
         showClarifyingModal,
         submitIntent,
+        selectWorkspace,
         togglePinPanel,
         undoLayout,
         resetLayout,

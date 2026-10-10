@@ -34,6 +34,12 @@ export interface ComponentMetadata {
   dataSources: string[];
 }
 
+export interface WorkspaceDefinition {
+  name: string;
+  domain: string;
+  icon: string;
+}
+
 export interface PanelPlan {
   instanceId: string;
   component_id: string;

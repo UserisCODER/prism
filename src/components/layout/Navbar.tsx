@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Sparkles, Bell, SlidersHorizontal, HelpCircle, ChevronDown, Cpu, Activity, Send } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
+import { WORKSPACES } from '../../data/workspaces';
 
 export const Navbar: React.FC = () => {
-  const { layoutPlan, triggerAction } = useWorkspace();
+  const { activeWorkspace, isLoadingWorkspace, layoutPlan, selectWorkspace, triggerAction } = useWorkspace();
+  const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const totalWidgets = (layoutPlan.hero ? 1 : 0) + layoutPlan.primary.length + layoutPlan.secondary.length;
 
   return (
@@ -28,10 +30,37 @@ export const Navbar: React.FC = () => {
           <div className="hidden h-5 w-[1px] bg-white/10 md:block" />
 
           {/* Workspace Dropdown */}
-          <button className="hidden items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:bg-white/10 md:flex">
+          <button
+            type="button"
+            aria-expanded={isWorkspaceMenuOpen}
+            aria-haspopup="menu"
+            disabled={isLoadingWorkspace}
+            onClick={() => setIsWorkspaceMenuOpen((open) => !open)}
+            className="relative hidden items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:bg-white/10 disabled:cursor-wait md:flex"
+          >
             <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Acme Enterprise Workspace</span>
+            <span>{isLoadingWorkspace ? 'Loading workspace...' : activeWorkspace.name}</span>
             <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+            {isWorkspaceMenuOpen && !isLoadingWorkspace && (
+              <div role="menu" className="absolute left-0 top-full z-50 mt-2 min-w-52 rounded-xl border border-white/10 bg-[#121623] p-1.5 shadow-2xl">
+                {WORKSPACES.map((workspace) => (
+                  <button
+                    key={workspace.domain}
+                    type="button"
+                    role="menuitem"
+                    disabled={workspace.domain === activeWorkspace.domain}
+                    onClick={() => {
+                      setIsWorkspaceMenuOpen(false);
+                      void selectWorkspace(workspace);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-slate-200 transition-colors hover:bg-white/10 disabled:text-indigo-300"
+                  >
+                    <span>{workspace.icon}</span>
+                    <span>{workspace.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </button>
         </div>
 
