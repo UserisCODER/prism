@@ -234,7 +234,9 @@ function createPanelElement(panel, extraClass = '') {
         return;
       }
       const data = await res.json();
-      whyContainer.textContent = data.reason || 'No explanation provided.';
+      whyContainer.textContent = data.intent 
+        ? 'For: "' + data.intent + '" — ' + data.reason 
+        : data.reason;
       whyLoaded = true;
     } catch (err) {
       console.error('Error fetching why explanation:', err);
