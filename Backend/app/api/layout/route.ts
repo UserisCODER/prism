@@ -265,11 +265,11 @@ Rules:
       return NextResponse.json(FALLBACK_LAYOUT);
     }
 
-    setLastEntry(intent, parsed.panels);
+    await setLastEntry(intent, parsed.panels);
     return NextResponse.json(parsed);
   } catch (error: any) {
     console.error('[API/LAYOUT] Error generating layout, returning fallback:', error);
-    setLastEntry(intent, FALLBACK_LAYOUT.panels);
+    await setLastEntry(intent, FALLBACK_LAYOUT.panels);
     return NextResponse.json(FALLBACK_LAYOUT);
   }
 }

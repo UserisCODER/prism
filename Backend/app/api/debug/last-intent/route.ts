@@ -3,7 +3,7 @@ import { getLastEntry } from '@/lib/store';
 
 export async function GET() {
   try {
-    const entry = getLastEntry();
+    const entry = await getLastEntry();
 
     if (!entry) {
       return NextResponse.json(

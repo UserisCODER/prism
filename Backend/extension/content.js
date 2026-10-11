@@ -107,6 +107,7 @@ async function fetchLayout(utterance, registry) {
     }
 
     const intentData = await intentResponse.json();
+    if (intentData.clarify === true) return [];
     const intent = intentData.intent || intentData;
     if (!intent) {
       return [];
