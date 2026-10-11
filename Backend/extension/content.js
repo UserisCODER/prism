@@ -255,21 +255,118 @@ function createPanelElement(panel, extraClass = '') {
   return panelEl;
 }
 
+function getZoneSections(container) {
+  let hero = container.querySelector('.prism-zone-hero');
+  let grid = container.querySelector('.prism-zone-grid');
+  let primary = grid ? grid.querySelector('.prism-zone-primary') : null;
+  let secondary = grid ? grid.querySelector('.prism-zone-secondary') : null;
+  let rail = container.querySelector('.prism-zone-rail');
+
+  if (!hero) {
+    hero = document.createElement('div');
+    hero.className = 'prism-zone-hero';
+  }
+  if (!grid) {
+    grid = document.createElement('div');
+    grid.className = 'prism-zone-grid';
+  }
+  if (!primary) {
+    primary = document.createElement('div');
+    primary.className = 'prism-zone-primary';
+  }
+  if (!secondary) {
+    secondary = document.createElement('div');
+    secondary.className = 'prism-zone-secondary';
+  }
+  if (!rail) {
+    rail = document.createElement('div');
+    rail.className = 'prism-zone-rail';
+  }
+
+  return { hero, grid, primary, secondary, rail };
+}
+
+function getZoneTarget(zone, { hero, primary, secondary, rail }) {
+  const z = (zone || '').toLowerCase();
+  if (z === 'hero') return hero;
+  if (z === 'secondary') return secondary;
+  if (z === 'rail') return rail;
+  if (z === 'primary') return primary;
+  return primary;
+}
+
+function attachZoneSections(container, { hero, grid, primary, secondary, rail }) {
+  if (primary.children.length > 0) {
+    grid.appendChild(primary);
+  } else {
+    primary.remove();
+  }
+
+  if (secondary.children.length > 0) {
+    grid.appendChild(secondary);
+  } else {
+    secondary.remove();
+  }
+
+  if (hero.children.length > 0) {
+    container.appendChild(hero);
+  } else {
+    hero.remove();
+  }
+
+  if (grid.children.length > 0) {
+    container.appendChild(grid);
+  } else {
+    grid.remove();
+  }
+
+  if (rail.children.length > 0) {
+    container.appendChild(rail);
+  } else {
+    rail.remove();
+  }
+}
+
+function cleanupEmptyZones(container) {
+  const primary = container.querySelector('.prism-zone-primary');
+  const secondary = container.querySelector('.prism-zone-secondary');
+  const grid = container.querySelector('.prism-zone-grid');
+  const hero = container.querySelector('.prism-zone-hero');
+  const rail = container.querySelector('.prism-zone-rail');
+
+  if (primary && primary.children.length === 0) primary.remove();
+  if (secondary && secondary.children.length === 0) secondary.remove();
+  if (grid && grid.children.length === 0) grid.remove();
+  if (hero && hero.children.length === 0) hero.remove();
+  if (rail && rail.children.length === 0) rail.remove();
+}
+
 function renderPanels(container, panels) {
-  const existing = container.querySelectorAll('.prism-panel');
-  existing.forEach((el) => el.remove());
+  const existingZones = container.querySelectorAll('.prism-zone-hero, .prism-zone-grid, .prism-zone-rail');
+  existingZones.forEach((el) => el.remove());
+  const existingPanels = container.querySelectorAll('.prism-panel');
+  existingPanels.forEach((el) => el.remove());
 
   if (!panels || panels.length === 0) {
     currentPanels = [];
     return;
   }
 
-  const visiblePanels = panels.slice(0, 5);
-  for (const panel of visiblePanels) {
+  const sortedPanels = [...panels].sort((a, b) => {
+    const pA = (a.priority !== undefined && a.priority !== null) ? Number(a.priority) : 999;
+    const pB = (b.priority !== undefined && b.priority !== null) ? Number(b.priority) : 999;
+    return pA - pB;
+  });
+
+  const zones = getZoneSections(container);
+
+  for (const panel of sortedPanels) {
     const panelEl = createPanelElement(panel);
-    container.appendChild(panelEl);
+    const targetZone = getZoneTarget(panel.zone, zones);
+    targetZone.appendChild(panelEl);
   }
 
+  attachZoneSections(container, zones);
   currentPanels = panels;
 }
 
@@ -414,6 +511,7 @@ function createOverlay() {
               el.classList.add('prism-panel-exit');
               setTimeout(() => {
                 el.remove();
+                cleanupEmptyZones(overlay);
               }, 300);
             }
           });
@@ -421,10 +519,18 @@ function createOverlay() {
           // Use delta.newPlan as final panels to render
           // For panels in delta.added: render them with class "prism-panel-enter"
           // For panels in delta.kept: keep them in place, just reorder
-          const visibleFinalPanels = finalPanels.slice(0, 5);
-          for (const panel of visibleFinalPanels) {
+          const sortedFinalPanels = [...finalPanels].sort((a, b) => {
+            const pA = (a.priority !== undefined && a.priority !== null) ? Number(a.priority) : 999;
+            const pB = (b.priority !== undefined && b.priority !== null) ? Number(b.priority) : 999;
+            return pA - pB;
+          });
+
+          const zones = getZoneSections(overlay);
+
+          for (const panel of sortedFinalPanels) {
             const id = panel.component_id;
             const existingEl = overlay.querySelector(`.prism-panel[data-component-id="${CSS.escape(id)}"]`);
+            const targetZone = getZoneTarget(panel.zone, zones);
 
             if (existingEl && !existingEl.classList.contains('prism-panel-exit')) {
               // Kept panel: remove previous enter class if present, update, and reorder in DOM
@@ -433,14 +539,15 @@ function createOverlay() {
               if (p && panel.reason) p.textContent = panel.reason;
               const span = existingEl.querySelector('.prism-zone');
               if (span && panel.zone) span.textContent = panel.zone;
-              overlay.appendChild(existingEl);
+              targetZone.appendChild(existingEl);
             } else {
               // Added panel: render with class "prism-panel-enter"
               const newEl = createPanelElement(panel, 'prism-panel-enter');
-              overlay.appendChild(newEl);
+              targetZone.appendChild(newEl);
             }
           }
 
+          attachZoneSections(overlay, zones);
           currentPanels = finalPanels;
         } catch (deltaError) {
           console.error('Error calculating layout delta:', deltaError);

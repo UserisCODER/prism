@@ -22,7 +22,56 @@
   padding: 14px;
   color: #e6edf3;
   box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  box-sizing: border-box;
   animation: prism-slide-in 0.2s ease-out;
+}
+
+.prism-zone-hero {
+  width: 100%;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.prism-zone-grid {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.prism-zone-primary {
+  flex: 2;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.prism-zone-secondary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+.prism-zone-rail {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.prism-zone-rail .prism-panel {
+  flex: 1 1 auto;
+  min-width: 120px;
+  padding: 8px;
+  font-size: 12px;
 }
 
 .prism-panel h3 {
