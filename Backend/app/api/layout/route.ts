@@ -219,7 +219,14 @@ export async function POST(req: NextRequest) {
           .order('date', { ascending: false })
           .limit(10);
 
-        contextData = { usage: data ?? [] };
+        contextData = {
+          usage: (data ?? []).map((r: any) => ({
+            ...r,
+            activeUsers: r.active_users ?? 0,
+            metric_name: 'Active Users',
+            value: r.active_users ?? 0,
+          })),
+        };
 
         if (data && data.length > 0) {
           contextFacts = 'Recent usage data from database:\n' + JSON.stringify(data, null, 2);
@@ -238,9 +245,23 @@ export async function POST(req: NextRequest) {
             .limit(5),
         ]);
 
+        const { data: clients } = await supabase.from('clients').select('*').limit(5);
+        const { data: contacts } = await supabase.from('contacts').select('*').limit(5);
         contextData = {
-          tasks: tasksResult.data ?? [],
-          projects: projectsResult.data ?? [],
+          tasks: (tasksResult.data ?? []).map((t: any) => ({
+            ...t,
+            project: t.project_name ?? t.project ?? 'Project',
+            assignee: t.assigned_to ?? t.assignee ?? 'Unassigned',
+            dueDate: t.due_date ?? 'TBD',
+          })),
+          projects: (projectsResult.data ?? []).map((p: any) => ({
+            ...p,
+            health: p.health ?? p.status ?? 'on_track',
+            completionPct: p.completion_pct ?? p.progress ?? 50,
+            overdueCount: p.overdue_count ?? 0,
+          })),
+          clients: clients ?? [],
+          contacts: contacts ?? [],
         };
 
         const parts: string[] = [];
@@ -249,78 +270,6 @@ export async function POST(req: NextRequest) {
         }
         if (projectsResult.data && projectsResult.data.length > 0) {
           parts.push('Active projects from database:\n' + JSON.stringify(projectsResult.data, null, 2));
-        }
-        contextFacts = parts.join('\n\n');
-      } else if (intent.domain === 'github' || intent.domain === 'code' || intent.domain === 'engineering') {
-        const [prsResult, issuesResult, ciResult] = await Promise.all([
-          supabase
-            .from('github_prs')
-            .select('title, author, status, branch, review_count, created_at')
-            .order('created_at', { ascending: false })
-            .limit(5),
-          supabase
-            .from('github_issues')
-            .select('title, label, assignee, status, priority, created_at')
-            .eq('status', 'open')
-            .order('created_at', { ascending: false })
-            .limit(5),
-          supabase
-            .from('github_ci_runs')
-            .select('branch, status, duration_seconds, triggered_by, ran_at')
-            .order('ran_at', { ascending: false })
-            .limit(5),
-        ]);
-
-        if (prsResult.error) console.error('github_prs error:', prsResult.error);
-        if (issuesResult.error) console.error('github_issues error:', issuesResult.error);
-        if (ciResult.error) console.error('github_ci_runs error:', ciResult.error);
-
-        contextData = {
-          prs: prsResult.data ?? [],
-          issues: issuesResult.data ?? [],
-          ci_runs: ciResult.data ?? [],
-        };
-
-        const parts: string[] = [];
-        if (prsResult.data && prsResult.data.length > 0) {
-          parts.push('Open pull requests:\n' + JSON.stringify(prsResult.data, null, 2));
-        }
-        if (issuesResult.data && issuesResult.data.length > 0) {
-          parts.push('Open issues:\n' + JSON.stringify(issuesResult.data, null, 2));
-        }
-        if (ciResult.data && ciResult.data.length > 0) {
-          parts.push('Recent CI runs:\n' + JSON.stringify(ciResult.data, null, 2));
-        }
-        contextFacts = parts.join('\n\n');
-      } else if (intent.domain === 'notion' || intent.domain === 'docs' || intent.domain === 'wiki') {
-        const [pagesResult, tasksResult] = await Promise.all([
-          supabase
-            .from('notion_pages')
-            .select('title, status, owner, last_edited, page_type')
-            .order('last_edited', { ascending: false })
-            .limit(5),
-          supabase
-            .from('notion_tasks')
-            .select('title, assignee, status, due_date, priority')
-            .neq('status', 'done')
-            .order('due_date', { ascending: true })
-            .limit(5),
-        ]);
-
-        if (pagesResult.error) console.error('notion_pages error:', pagesResult.error);
-        if (tasksResult.error) console.error('notion_tasks error:', tasksResult.error);
-
-        contextData = {
-          pages: pagesResult.data ?? [],
-          tasks: tasksResult.data ?? [],
-        };
-
-        const parts: string[] = [];
-        if (pagesResult.data && pagesResult.data.length > 0) {
-          parts.push('Recent Notion pages:\n' + JSON.stringify(pagesResult.data, null, 2));
-        }
-        if (tasksResult.data && tasksResult.data.length > 0) {
-          parts.push('Open Notion tasks:\n' + JSON.stringify(tasksResult.data, null, 2));
         }
         contextFacts = parts.join('\n\n');
       }
