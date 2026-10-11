@@ -1,7 +1,15 @@
 import React from 'react';
 import { TrendingUp, Users, CheckSquare } from 'lucide-react';
+import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const KpiRowPanel: React.FC = () => {
+  const { liveData } = useWorkspace();
+  const usage = Array.isArray(liveData?.usage) ? liveData.usage : [];
+  const latest = usage[0];
+  const kpiValue = latest?.value ?? '4,800';
+  const kpiLabel = latest?.metric_name ?? 'Active Users';
+  const kpiSegment = latest?.segment ?? 'Enterprise';
+
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       
@@ -9,14 +17,14 @@ export const KpiRowPanel: React.FC = () => {
       <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black p-5 shadow-xl">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300">
-            ARR REVENUE
+            {kpiLabel}
           </span>
           <TrendingUp className="h-4 w-4 text-emerald-400" />
         </div>
 
         <div className="mt-2 flex items-baseline gap-2">
-          <span className="font-heading text-3xl font-extrabold text-white">$1.42M</span>
-          <span className="text-xs font-semibold text-emerald-400">+12.4% vs last month</span>
+          <span className="font-heading text-3xl font-extrabold text-white">{String(kpiValue)}</span>
+          <span className="text-xs font-semibold text-emerald-400">{kpiSegment}</span>
         </div>
 
         {/* Mini SVG Sparkline */}

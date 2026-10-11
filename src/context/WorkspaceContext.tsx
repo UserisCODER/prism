@@ -27,6 +27,7 @@ interface WorkspaceContextType {
   isLoadingExplanation: boolean;
   toasts: Toast[];
   pinnedIds: string[];
+  liveData: Record<string, any>;
   undoStack: LayoutPlan[];
   explainModalPanel: PanelPlan | null;
   resolveClarification: (option: string) => void;
@@ -56,6 +57,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState<boolean>(false);
   const [undoStack, setUndoStack] = useState<LayoutPlan[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
+  const [liveData, setLiveData] = useState<Record<string, any>>({});
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState<boolean>(false);
   const [clarificationInput, setClarificationInput] = useState('');
@@ -121,6 +123,9 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       setUndoStack((prev) => [layoutPlan, ...prev].slice(0, 5));
       setCurrentIntent(intent);
       setLayoutPlan(layout);
+      if ('backendData' in result) {
+        setLiveData(result.backendData);
+      }
       setPinnedIds(layout.pinnedIds);
       setShowClarifyingModal(false);
 
@@ -242,6 +247,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         isLoadingExplanation,
         toasts,
         pinnedIds,
+        liveData,
         undoStack,
         explainModalPanel,
         resolveClarification,

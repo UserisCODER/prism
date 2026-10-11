@@ -4,18 +4,23 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const ClientOverviewPanel: React.FC<{ clientId?: string }> = () => {
   const { openExplainModal, currentIntent } = useWorkspace();
-  const clientName =
-    currentIntent.entities.find((entity) => entity.type === 'client')?.value ??
-    (currentIntent.rawText.toLowerCase().includes('acme') ? 'Acme Corp' : 'Meridian Labs');
+  const { liveData } = useWorkspace();
+  const client = liveData?.clients?.[0];
+  const resolvedClientName = client?.name || 
+    currentIntent.entities.find((e) => e.type === 'client')?.value || 'Acme Corp';
+  const healthScore = client?.health_score ?? 72;
 
   return (
     <div className="rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-6 backdrop-blur-xl shadow-xl">
       {/* Top Header */}
       <div className="flex items-center justify-between">
         <div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
-            AI CONTEXT DISPATCH • Generated 2 mins ago
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+              AI CONTEXT DISPATCH • Generated 2 mins ago
+            </span>
+            <span className="text-xs text-slate-400">Health Score: <span className="text-white font-bold">{healthScore}</span></span>
+          </div>
           <h2 className="mt-1 font-heading text-xl font-bold text-white md:text-2xl">
             Good morning, Sarah. Here is your synthesized agenda.
           </h2>
@@ -42,7 +47,7 @@ export const ClientOverviewPanel: React.FC<{ clientId?: string }> = () => {
       </div>
 
       <p className="mt-3 text-xs md:text-sm text-slate-300 leading-relaxed max-w-3xl">
-        Prioritized based on your 11:30 AM sync with <span className="font-semibold text-white">{clientName}</span>. Their token throughput increased <span className="font-bold text-emerald-400">+34% this week</span>, triggering contract renegotiation thresholds. 4 recommended actions were staged below for your authorization.
+        Prioritized based on your 11:30 AM sync with <span className="font-semibold text-white">{resolvedClientName}</span>. Their token throughput increased <span className="font-bold text-emerald-400">+34% this week</span>, triggering contract renegotiation thresholds. 4 recommended actions were staged below for your authorization.
       </p>
 
       {/* Linked Metrics Pills */}

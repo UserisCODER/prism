@@ -20,7 +20,7 @@ interface BackendPanel {
 
 export type IntentProcessResult =
   | { clarification: { question: string; options: string[] } }
-  | { intent: IntentParseResult; layout: LayoutPlan };
+  | { intent: IntentParseResult; layout: LayoutPlan; backendData: Record<string, any> };
 
 async function requestApi(path: string, init?: RequestInit): Promise<unknown> {
   const response = await fetch(`${API_BASE_URL}/api${path}`, init);
@@ -273,6 +273,11 @@ export async function processUserIntent(
     );
   }
 
+  const backendData: Record<string, any> = 
+    (typeof layoutResponse === 'object' && layoutResponse !== null && 'data' in layoutResponse)
+      ? (layoutResponse.data as Record<string, any>) ?? {}
+      : {};
+
   let finalPanels = layoutResponse.panels;
   let pinnedComponentIds = currentPlan?.pinnedIds ?? [];
   if (currentPlan) {
@@ -305,6 +310,7 @@ export async function processUserIntent(
   return {
     intent: normalizedIntent,
     layout: createLayoutPlan(finalPanels, normalizedIntent, pinnedComponentIds),
+    backendData,
   };
 }
 
