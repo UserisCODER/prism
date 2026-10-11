@@ -13,6 +13,7 @@ import { QuickActionDock } from './components/layout/QuickActionDock';
 import { ExplainabilityModal } from './components/common/ExplainabilityModal';
 import { ToastContainer } from './components/common/ToastContainer';
 import { GitHubWorkspaceLayout } from './components/layout/GitHubWorkspaceLayout';
+import { TaskadeWorkspace } from './components/taskade/TaskadeWorkspace';
 
 const MainWorkspaceCanvas: React.FC = () => {
   const { activeRegistry, layoutPlan, activeWorkspace } = useWorkspace();
@@ -268,9 +269,26 @@ const AppInner: React.FC = () => {
 };
 
 export function App() {
+  const [showAdaptiveCanvas, setShowAdaptiveCanvas] = useState(false);
+
   return (
     <WorkspaceProvider>
-      <AppInner />
+      <>
+        {showAdaptiveCanvas && (
+          <button
+            type="button"
+            className="adaptive-return"
+            onClick={() => setShowAdaptiveCanvas(false)}
+          >
+            Back to PRISM workspace
+          </button>
+        )}
+        {showAdaptiveCanvas ? (
+          <AppInner />
+        ) : (
+          <TaskadeWorkspace onOpenAdaptiveCanvas={() => setShowAdaptiveCanvas(true)} />
+        )}
+      </>
     </WorkspaceProvider>
   );
 }
