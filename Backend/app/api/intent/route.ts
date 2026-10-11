@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-2.0-flash-lite',
       systemInstruction: `You are an intent parser for an adaptive workspace. Parse the user's utterance and return valid JSON.
 
 JSON Output Schema:
