@@ -24,6 +24,56 @@ function detectIntent() {
   return 'Working on GitHub: ' + title;
 }
 
+function gatherPageContext() {
+  const domain = window.location.hostname;
+  const url = window.location.href;
+  let pageType = 'generic';
+
+  if (domain.includes('github.com')) {
+    const isRepoRoot = /^https?:\/\/(?:www\.)?github\.com\/[^/?#]+\/[^/?#]+\/?(?:[?#].*)?$/.test(url);
+    if (url.includes('/pull/')) {
+      pageType = 'pull_request';
+    } else if (url.includes('/issues/')) {
+      pageType = 'issue';
+    } else if (url.includes('/actions')) {
+      pageType = 'ci_pipeline';
+    } else if (url.includes('/tree/') || isRepoRoot) {
+      pageType = 'repository';
+    } else {
+      pageType = 'github_generic';
+    }
+  } else if (domain.includes('notion.so')) {
+    if (url.includes('/page/')) {
+      pageType = 'notion_page';
+    } else {
+      pageType = 'notion_workspace';
+    }
+  } else if (domain.includes('salesforce.com')) {
+    if (url.includes('/lightning/r/Opportunity')) {
+      pageType = 'opportunity';
+    } else if (url.includes('/lightning/r/Contact')) {
+      pageType = 'contact';
+    } else if (url.includes('/lightning/r/Account')) {
+      pageType = 'account';
+    } else {
+      pageType = 'salesforce_generic';
+    }
+  } else {
+    pageType = 'generic';
+  }
+
+  const metaDescEl = document.querySelector('meta[name="description"]');
+  const metaDescription = metaDescEl ? (metaDescEl.getAttribute('content') || '') : '';
+
+  return {
+    domain,
+    url,
+    pageType,
+    pageTitle: document.title,
+    metaDescription,
+  };
+}
+
 async function fetchWorkspace() {
   try {
     const response = await fetch(`${API_BASE}/api/workspace?domain=${WORKSPACE_DOMAIN}`);
@@ -40,6 +90,7 @@ async function fetchWorkspace() {
 
 async function fetchLayout(utterance, registry) {
   try {
+    const pageContext = gatherPageContext();
     const intentResponse = await fetch(`${API_BASE}/api/intent`, {
       method: 'POST',
       headers: {
@@ -47,7 +98,7 @@ async function fetchLayout(utterance, registry) {
       },
       body: JSON.stringify({
         utterance,
-        workspace: WORKSPACE_DOMAIN,
+        context: pageContext,
       }),
     });
 
@@ -262,10 +313,11 @@ function createOverlay() {
     btn.textContent = '...';
 
     try {
+      const pageContext = gatherPageContext();
       const intentRes = await fetch(`${API_BASE}/api/intent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ utterance: value }),
+        body: JSON.stringify({ utterance: value, context: pageContext }),
       });
 
       if (!intentRes.ok) {

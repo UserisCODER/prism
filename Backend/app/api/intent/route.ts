@@ -6,9 +6,11 @@ export async function POST(req: NextRequest) {
   console.log(`[API/INTENT] GEMINI_API_KEY exists: ${hasApiKey}`);
 
   let utterance = '';
+  let context: any = undefined;
   try {
     const body = await req.json();
     utterance = typeof body?.utterance === 'string' ? body.utterance.trim() : '';
+    context = body?.context;
 
     if (!utterance) {
       return NextResponse.json({ error: 'Valid utterance is required' }, { status: 400 });
@@ -51,7 +53,11 @@ Rules:
       },
     });
 
-    const result = await model.generateContent(utterance);
+    const prompt = context
+      ? `${utterance}\nPage context: domain=${context.domain}, pageType=${context.pageType}, title=${context.pageTitle}`
+      : utterance;
+
+    const result = await model.generateContent(prompt);
     const response = await result.response;
     let rawText = response.text().trim();
 
@@ -99,6 +105,7 @@ Rules:
               (missingInfoList.length > 0
                 ? missingInfoList.map((item: string) => `Specify ${item}`)
                 : ['Provide more details', 'Cancel']),
+        ...(context ? { context } : {}),
       });
     }
 
@@ -111,7 +118,9 @@ Rules:
         urgency: urgency || 'medium',
         deadline: deadline || undefined,
         confidence: confidenceScore,
+        ...(context ? { context } : {}),
       },
+      ...(context ? { context } : {}),
     });
   } catch (error: any) {
     console.error('[API/INTENT] Failed to parse intent with Gemini model, applying fallback rules:', {
@@ -140,6 +149,7 @@ Rules:
         options: text.includes('meet')
           ? ['Schedule a new meeting', 'View upcoming meetings', 'Search past meeting notes']
           : ['View usage metrics', 'Check project analytics', 'View revenue'],
+        ...(context ? { context } : {}),
       });
     }
 
@@ -177,7 +187,9 @@ Rules:
         urgency,
         deadline,
         confidence: 0.92,
+        ...(context ? { context } : {}),
       },
+      ...(context ? { context } : {}),
     });
   }
 }
