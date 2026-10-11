@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { FullWorkspaceBundle, NodeItem, WorkspaceProject, Agent, Workflow } from '@/lib/types/workspace';
+import { FullWorkspaceBundle, NodeItem, WorkspaceProject, Agent, Workflow, Workspace } from '@/lib/types/workspace';
 
 // Rich fallback workspace bundle for instant demo / starter templates
 function getStarterBundle(id: string): FullWorkspaceBundle {
@@ -179,7 +179,7 @@ export async function GET(
       return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
     }
 
-    let ws: Record<string, unknown> | null = null;
+    let ws: Workspace | null = null;
     const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
     if (uuidPattern.test(id)) {
