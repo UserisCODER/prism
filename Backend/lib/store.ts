@@ -5,6 +5,7 @@ export interface StoredPanel {
   reason: string
   zone?: string
   priority?: number
+  data?: Record<string, any>
   [key: string]: unknown
 }
 
@@ -12,12 +13,18 @@ export type DebugEntry = {
   intent: any
   layout: any
   panels: StoredPanel[]
+  data?: Record<string, any>
   timestamp: string
 }
 
-export async function setLastEntry(intentOrEntry: any, layoutOrPanels?: any): Promise<void> {
+export async function setLastEntry(
+  intentOrEntry: any,
+  layoutOrPanels?: any,
+  entryData?: Record<string, any>
+): Promise<void> {
   let intent = intentOrEntry
   let panels = layoutOrPanels
+  let data = entryData
 
   if (
     intentOrEntry &&
@@ -27,6 +34,7 @@ export async function setLastEntry(intentOrEntry: any, layoutOrPanels?: any): Pr
   ) {
     intent = intentOrEntry.intent
     panels = intentOrEntry.panels
+    data = intentOrEntry.data
   }
 
   const panelsList: StoredPanel[] = Array.isArray(panels)
@@ -44,6 +52,7 @@ export async function setLastEntry(intentOrEntry: any, layoutOrPanels?: any): Pr
         id: 'singleton',
         intent: intent ?? null,
         panels: panelsList,
+        data: data ?? null,
         timestamp,
       })
 
@@ -59,7 +68,7 @@ export async function getLastEntry(): Promise<DebugEntry | null> {
   try {
     const { data, error } = await supabase
       .from('last_layout')
-      .select('intent, panels, timestamp')
+      .select('intent, panels, data, timestamp')
       .eq('id', 'singleton')
       .maybeSingle()
 
@@ -78,6 +87,7 @@ export async function getLastEntry(): Promise<DebugEntry | null> {
       intent: data.intent,
       layout: panelsList,
       panels: panelsList,
+      data: data.data ?? undefined,
       timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString(),
     }
   } catch (err) {

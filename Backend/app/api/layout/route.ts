@@ -45,6 +45,7 @@ export interface Panel {
 
 export interface LayoutResponse {
   panels: Panel[];
+  data?: Record<string, any>;
 }
 
 export const FALLBACK_LAYOUT: LayoutResponse = {
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       console.warn('[API/LAYOUT] GEMINI_API_KEY environment variable is missing, returning fallback layout');
-      return NextResponse.json(FALLBACK_LAYOUT);
+      return NextResponse.json({ ...FALLBACK_LAYOUT, data: {} });
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
@@ -171,22 +172,54 @@ export async function POST(req: NextRequest) {
     });
 
     let contextFacts = '';
+    let contextData: Record<string, any> = {};
+
     try {
       if (intent.domain === 'meetings') {
-        const { data } = await supabase
-          .from('meetings')
-          .select('title, scheduled_at, agenda, notes, client_id')
-          .order('scheduled_at', { ascending: true })
-          .limit(5);
-        if (data && data.length > 0) {
-          contextFacts = 'Upcoming meetings from database:\n' + JSON.stringify(data, null, 2);
+        const [meetingsRes, clientsRes, contactsRes] = await Promise.all([
+          supabase
+            .from('meetings')
+            .select('title, scheduled_at, agenda, notes, client_id')
+            .order('scheduled_at', { ascending: true })
+            .limit(5),
+          supabase
+            .from('clients')
+            .select('*')
+            .limit(5),
+          supabase
+            .from('contacts')
+            .select('*')
+            .limit(5),
+        ]);
+
+        contextData = {
+          meetings: meetingsRes.data ?? [],
+          clients: clientsRes.data ?? [],
+          contacts: contactsRes.data ?? [],
+        };
+
+        const parts: string[] = [];
+        if (meetingsRes.data && meetingsRes.data.length > 0) {
+          parts.push('Upcoming meetings from database:\n' + JSON.stringify(meetingsRes.data, null, 2));
         }
+        if (clientsRes.data && clientsRes.data.length > 0) {
+          parts.push('Clients from database:\n' + JSON.stringify(clientsRes.data, null, 2));
+        }
+        if (contactsRes.data && contactsRes.data.length > 0) {
+          parts.push('Contacts from database:\n' + JSON.stringify(contactsRes.data, null, 2));
+        }
+        contextFacts = parts.join('\n\n');
       } else if (intent.domain === 'analytics') {
         const { data } = await supabase
           .from('usage_daily')
           .select('date, metric_name, value, segment')
           .order('date', { ascending: false })
           .limit(10);
+
+        contextData = {
+          usage: data ?? [],
+        };
+
         if (data && data.length > 0) {
           contextFacts = 'Recent usage data from database:\n' + JSON.stringify(data, null, 2);
         }
@@ -203,7 +236,13 @@ export async function POST(req: NextRequest) {
             .eq('status', 'active')
             .limit(5),
         ]);
-        const parts = [];
+
+        contextData = {
+          tasks: tasksResult.data ?? [],
+          projects: projectsResult.data ?? [],
+        };
+
+        const parts: string[] = [];
         if (tasksResult.data && tasksResult.data.length > 0) {
           parts.push('Overdue tasks from database:\n' + JSON.stringify(tasksResult.data, null, 2));
         }
@@ -215,6 +254,7 @@ export async function POST(req: NextRequest) {
     } catch (dbError) {
       console.error('[API/LAYOUT] Supabase pre-query failed (non-fatal):', dbError);
       contextFacts = '';
+      contextData = {};
     }
 
     const prompt = `You are an adaptive workspace layout engine. Given the user's intent, select the most relevant panels to construct an optimal workspace dashboard.
@@ -262,14 +302,14 @@ Rules:
     validateLayoutResponse(parsed);
 
     if (!parsed.panels || parsed.panels.length === 0) {
-      return NextResponse.json(FALLBACK_LAYOUT);
+      return NextResponse.json({ ...FALLBACK_LAYOUT, data: {} });
     }
 
-    await setLastEntry(intent, parsed.panels);
-    return NextResponse.json(parsed);
+    await setLastEntry(intent, parsed.panels, contextData);
+    return NextResponse.json({ panels: parsed.panels, data: contextData });
   } catch (error: any) {
     console.error('[API/LAYOUT] Error generating layout, returning fallback:', error);
-    await setLastEntry(intent, FALLBACK_LAYOUT.panels);
-    return NextResponse.json(FALLBACK_LAYOUT);
+    await setLastEntry(intent, FALLBACK_LAYOUT.panels, {});
+    return NextResponse.json({ ...FALLBACK_LAYOUT, data: {} });
   }
 }
