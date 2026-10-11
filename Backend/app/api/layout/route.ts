@@ -246,6 +246,47 @@ export async function POST(req: NextRequest) {
           parts.push('Active projects from database:\n' + JSON.stringify(projectsResult.data, null, 2));
         }
         contextFacts = parts.join('\n\n');
+      } else if (intent.domain === 'github' || intent.domain === 'code' || intent.domain === 'engineering') {
+        const [prsResult, issuesResult, ciResult] = await Promise.all([
+          supabase
+            .from('github_prs')
+            .select('title, author, status, branch, review_count, created_at')
+            .order('created_at', { ascending: false })
+            .limit(5),
+          supabase
+            .from('github_issues')
+            .select('title, label, assignee, status, priority, created_at')
+            .eq('status', 'open')
+            .order('created_at', { ascending: false })
+            .limit(5),
+          supabase
+            .from('github_ci_runs')
+            .select('branch, status, duration_seconds, triggered_by, ran_at')
+            .order('ran_at', { ascending: false })
+            .limit(5),
+        ]);
+
+        if (prsResult.error) console.error('github_prs error:', prsResult.error);
+        if (issuesResult.error) console.error('github_issues error:', issuesResult.error);
+        if (ciResult.error) console.error('github_ci_runs error:', ciResult.error);
+
+        contextData = {
+          prs: prsResult.data ?? [],
+          issues: issuesResult.data ?? [],
+          ci_runs: ciResult.data ?? [],
+        };
+
+        const parts: string[] = [];
+        if (prsResult.data && prsResult.data.length > 0) {
+          parts.push('Open pull requests:\n' + JSON.stringify(prsResult.data, null, 2));
+        }
+        if (issuesResult.data && issuesResult.data.length > 0) {
+          parts.push('Open issues:\n' + JSON.stringify(issuesResult.data, null, 2));
+        }
+        if (ciResult.data && ciResult.data.length > 0) {
+          parts.push('Recent CI runs:\n' + JSON.stringify(ciResult.data, null, 2));
+        }
+        contextFacts = parts.join('\n\n');
       }
     } catch (dbError) {
       console.error('[API/LAYOUT] Supabase pre-query failed (non-fatal):', dbError);
