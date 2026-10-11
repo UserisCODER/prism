@@ -11,6 +11,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     utterance = typeof body?.utterance === 'string' ? body.utterance.trim() : '';
     context = body?.context;
+    const suggestedDomain = context?.suggestedDomain || 'general';
 
     if (!utterance) {
       return NextResponse.json({ error: 'Valid utterance is required' }, { status: 400 });
@@ -59,7 +60,7 @@ Rules:
     });
 
     const prompt = context
-      ? `${utterance}\nPage context: domain=${context.domain}, pageType=${context.pageType}, title=${context.pageTitle}`
+      ? `${utterance}\nPage context: domain=${context.domain}, pageType=${context.pageType}, title=${context.pageTitle}\nIf the user is on a ${suggestedDomain} website, prefer domain: "${suggestedDomain}" unless the utterance clearly indicates a different domain.`
       : utterance;
 
     const result = await model.generateContent(prompt);

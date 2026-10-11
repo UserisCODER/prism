@@ -66,12 +66,22 @@ function gatherPageContext() {
   const metaDescEl = document.querySelector('meta[name="description"]');
   const metaDescription = metaDescEl ? (metaDescEl.getAttribute('content') || '') : '';
 
+  let suggestedDomain = 'general';
+  if (domain.includes('github.com')) {
+    suggestedDomain = 'github';
+  } else if (domain.includes('notion.so')) {
+    suggestedDomain = 'notion';
+  } else if (domain.includes('salesforce.com')) {
+    suggestedDomain = 'salesforce';
+  }
+
   return {
     domain,
     url,
     pageType,
     pageTitle: document.title,
     metaDescription,
+    suggestedDomain,
   };
 }
 
