@@ -19,11 +19,16 @@ import { InsightCardPanel } from './InsightCardPanel';
 import { SegmentUsageTablePanel } from './SegmentUsageTablePanel';
 import { ProjectHealthPanel } from './ProjectHealthPanel';
 import { ContactCardPanel } from './ContactCardPanel';
+import { MeetingBriefPanel } from './MeetingBriefPanel';
+import { SuggestedActionsPanel } from './SuggestedActionsPanel';
 
 const COMPONENT_MAP: Record<string, React.FC<any>> = {
   client_overview: ClientOverviewPanel,
+  meeting_prep_brief: MeetingBriefPanel,
+  meeting_brief: MeetingBriefPanel,
   kpi_row: KpiRowPanel,
   trend_chart: UsageTrendChart,
+  segment_breakdown: SegmentUsageTablePanel,
   anomaly_callout: AnomalyCalloutPanel,
   deadline_banner: DeadlineBannerPanel,
   task_list: OverdueTaskListPanel,
@@ -33,23 +38,31 @@ const COMPONENT_MAP: Record<string, React.FC<any>> = {
   insight_card: InsightCardPanel,
   segment_usage_table: SegmentUsageTablePanel,
   project_health_card: ProjectHealthPanel,
+  project_status: ProjectHealthPanel,
   contact_card: ContactCardPanel,
   autonomous_log: AutonomousLogPanel,
+  suggested_actions: SuggestedActionsPanel,
 };
+
+const UnknownPanel: React.FC<{ componentId: string }> = ({ componentId }) => (
+  <div className="rounded-2xl border border-rose-300/20 bg-rose-950/20 p-5 text-sm text-rose-100">
+    This workspace panel is not available: <code>{componentId}</code>
+  </div>
+);
 
 export const RegistryContainer: React.FC<{ panel: PanelPlan }> = ({ panel }) => {
   const { togglePinPanel, openExplainModal, pinnedIds } = useWorkspace();
-  const ComponentClass = COMPONENT_MAP[panel.component_id] || AutonomousLogPanel;
+  const ComponentClass = COMPONENT_MAP[panel.component_id];
   const isPinned = pinnedIds.includes(panel.instanceId);
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 15, scale: 0.98 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.35, ease: 'easeOut' }}
-      className="group relative"
+      initial={{ opacity: 0, x: 28, transition: { duration: 0.3, ease: 'easeOut' } }}
+      animate={{ opacity: 1, x: 0, transition: { duration: 0.3, ease: 'easeOut' } }}
+      exit={{ opacity: 0, x: -28, transition: { duration: 0.3, ease: 'easeIn' } }}
+      transition={{ layout: { duration: 0.3, ease: 'easeInOut' } }}
+      className="prism-panel group relative"
     >
       {/* Panel Top-Right Floating Controls (Pin & Explain) */}
       <div className="absolute right-3 top-3 z-20 flex items-center gap-1.5 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
@@ -86,7 +99,7 @@ export const RegistryContainer: React.FC<{ panel: PanelPlan }> = ({ panel }) => 
       )}
 
       {/* Render Widget */}
-      <ComponentClass />
+      {ComponentClass ? <ComponentClass /> : <UnknownPanel componentId={panel.component_id} />}
     </motion.div>
   );
 };

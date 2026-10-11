@@ -1,5 +1,5 @@
 import React from 'react';
-import { Cpu, Activity, Zap } from 'lucide-react';
+import { Cpu, Activity, Zap, ArrowDown } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const HeaderHero: React.FC = () => {
@@ -7,43 +7,39 @@ export const HeaderHero: React.FC = () => {
   const activeWidgetCount = (layoutPlan.hero ? 1 : 0) + layoutPlan.primary.length + layoutPlan.secondary.length;
 
   return (
-    <div className="relative overflow-hidden pt-12 pb-8 text-center">
-      {/* Ambient Radial Background Glows */}
-      <div className="pointer-events-none absolute left-1/2 top-0 -z-10 h-[450px] w-[800px] -translate-x-1/2 rounded-full bg-gradient-to-tr from-indigo-600/20 via-purple-600/15 to-pink-500/10 blur-[120px]" />
-      
-      <div className="mx-auto max-w-5xl px-4">
-        
-        {/* Floating Feature Badges */}
-        <div className="mb-6 flex flex-wrap items-center justify-center gap-3">
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300 backdrop-blur-md">
+    <section className="prism-hero relative overflow-hidden pt-12 pb-7 text-center">
+      <div className="prism-hero-art pointer-events-none absolute inset-0" />
+
+      <div className="prism-hero-content relative mx-auto max-w-5xl px-4">
+        <div className="mb-5 flex flex-wrap items-center justify-center gap-2">
+          <div className="prism-hero-badge inline-flex items-center gap-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-xs font-medium text-purple-300 backdrop-blur-md">
             <Cpu className="h-3.5 w-3.5 text-purple-400" />
             <span>AI-orchestrated</span>
           </div>
-
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 backdrop-blur-md">
+          <div className="prism-hero-badge inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-medium text-emerald-300 backdrop-blur-md">
             <Activity className="h-3.5 w-3.5 text-emerald-400" />
-            <span>Real-time Synthesis</span>
+            <span>Real-time synthesis</span>
           </div>
         </div>
 
-        {/* Main Hero Title */}
-        <h1 className="font-heading text-4xl font-extrabold tracking-tight text-white md:text-5xl lg:text-6xl">
-          Platform For Next Level AI Orchestration
+        <p className="prism-eyebrow">Your intelligence, in focus</p>
+        <h1 className="prism-hero-title mx-auto max-w-4xl font-heading text-4xl font-extrabold tracking-tight text-white md:text-5xl lg:text-6xl">
+          See the signal.<br className="hidden sm:block" /> Shape what’s next.
         </h1>
-
-        <p className="mx-auto mt-4 max-w-2xl text-sm md:text-base text-slate-400 leading-relaxed">
-          Explore your workspace dashboards, operational telemetry, and predictive insights.
+        <p className="prism-hero-description mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-slate-300 md:text-base">
+          One clear view of your workspace, live operations, and the decisions that move you forward.
         </p>
-
+        <a className="prism-scroll-cue mt-7 inline-flex items-center gap-2 text-xs font-medium text-slate-300" href="#workspace">
+          Explore your workspace <ArrowDown className="h-3.5 w-3.5" />
+        </a>
       </div>
 
-      {/* Telemetry Status Bar below Hero */}
-      <div className="mx-auto mt-8 max-w-[1600px] px-4 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#121623]/80 px-4 py-2.5 backdrop-blur-md text-xs font-mono text-slate-300">
+      <div className="prism-status-wrap relative mx-auto mt-9 max-w-[1600px] px-4 sm:px-6">
+        <div className="prism-statusbar flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-[#121623]/80 px-4 py-2.5 text-xs font-mono text-slate-300 backdrop-blur-md">
           
           <div className="flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-emerald-400">Workspace Active</span>
+            <span className="text-emerald-400">Workspace active</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -72,10 +68,8 @@ export const HeaderHero: React.FC = () => {
             <Zap className="h-3 w-3 text-purple-400" />
             <span>AUTONOMOUS</span>
           </div>
-
         </div>
       </div>
-
-    </div>
+    </section>
   );
 };

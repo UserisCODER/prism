@@ -3,14 +3,10 @@ import { HelpCircle, CheckCircle2, X } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const ClarifyingModal: React.FC = () => {
-  const { currentIntent, showClarifyingModal, dismissClarifyingModal, submitIntent } = useWorkspace();
+  const { currentIntent, showClarifyingModal, dismissClarifyingModal, resolveClarification } =
+    useWorkspace();
 
   if (!showClarifyingModal || !currentIntent.clarifying_question) return null;
-
-  const handleOptionSelect = (optionText: string) => {
-    dismissClarifyingModal();
-    submitIntent(`Prepare client meeting for ${optionText}`);
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-md animate-fade-in">
@@ -51,7 +47,7 @@ export const ClarifyingModal: React.FC = () => {
           {currentIntent.clarifying_options?.map((option, idx) => (
             <button
               key={idx}
-              onClick={() => handleOptionSelect(option)}
+              onClick={() => resolveClarification(option)}
               className="group flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3.5 text-left text-sm font-medium text-slate-200 transition-all hover:border-indigo-500/50 hover:bg-indigo-600/15 hover:text-white hover:shadow-lg hover:shadow-indigo-500/10"
             >
               <span className="flex items-center gap-3">

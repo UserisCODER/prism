@@ -1,21 +1,39 @@
 import React, { useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { ArrowRight, AudioLines, ChartNoAxesCombined, CheckCircle2, ChevronDown, Layers, ShieldCheck, Sparkles } from 'lucide-react';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
 import { Navbar } from './components/layout/Navbar';
 import { HeaderHero } from './components/layout/HeaderHero';
+import { IntentBar } from './components/layout/IntentBar';
+import { ClarifyingModal } from './components/intent/ClarifyingModal';
 import { ExplainabilityLog } from './components/layout/ExplainabilityLog';
 import { ActiveAgents } from './components/layout/ActiveAgents';
 import { RegistryContainer } from './components/registry/RegistryContainer';
 import { QuickActionDock } from './components/layout/QuickActionDock';
 import { ExplainabilityModal } from './components/common/ExplainabilityModal';
 import { ToastContainer } from './components/common/ToastContainer';
-import { Layers, Sparkles, ChevronDown, CheckCircle2 } from 'lucide-react';
 
 const MainWorkspaceCanvas: React.FC = () => {
   const { activeRegistry, layoutPlan } = useWorkspace();
   const [showExtensionCatalog, setShowExtensionCatalog] = useState(false);
 
   return (
-    <main className="relative z-10 mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 pb-32">
+    <main id="workspace" className="relative z-10 prism-main mx-auto max-w-[1600px] px-4 sm:px-6 lg:px-8 pb-32">
+      <section id="demo" className="prism-command mx-auto mb-9 max-w-[1600px]">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="prism-eyebrow">Your adaptive workspace</p>
+            <h2 className="font-serif text-3xl italic text-white sm:text-4xl">
+              What would you like to focus on?
+            </h2>
+          </div>
+          <p className="max-w-md text-xs leading-relaxed text-slate-400 sm:text-right">
+            Describe a goal in your own words. PRISM will bring the right context, data, and next steps into view.
+          </p>
+        </div>
+        <IntentBar />
+      </section>
+
       {/* Upper Control Strip */}
       <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
         <div className="flex items-center gap-2">
@@ -88,38 +106,48 @@ const MainWorkspaceCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* 12-Column Responsive Grid Canvas */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+      {/* 12-Column Responsive Grid Canvas matching UI Reference */}
+      <div className="prism-dashboard-grid grid grid-cols-1 gap-6 lg:grid-cols-12">
+        
         {/* Left Column (8 cols): Hero + Primary + Secondary Panels */}
         <div className="space-y-6 lg:col-span-8">
           {/* Hero Zone */}
-          {layoutPlan.hero && (
-            <div className="w-full">
-              <RegistryContainer panel={layoutPlan.hero} />
-            </div>
-          )}
+          <AnimatePresence initial={false} mode="popLayout">
+            {layoutPlan.hero && (
+              <RegistryContainer key={layoutPlan.hero.instanceId} panel={layoutPlan.hero} />
+            )}
+          </AnimatePresence>
 
           {/* Primary Zone Panels */}
           {layoutPlan.primary.length > 0 && (
             <div className="space-y-6">
-              {layoutPlan.primary.map((panel) => (
-                <RegistryContainer key={panel.instanceId} panel={panel} />
-              ))}
+              <AnimatePresence initial={false} mode="popLayout">
+                {layoutPlan.primary.map((panel) => (
+                  <RegistryContainer key={panel.instanceId} panel={panel} />
+                ))}
+              </AnimatePresence>
             </div>
           )}
 
           {/* Secondary Zone Panels */}
           {layoutPlan.secondary.length > 0 && (
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              {layoutPlan.secondary.map((panel) => (
-                <RegistryContainer key={panel.instanceId} panel={panel} />
-              ))}
+              <AnimatePresence initial={false} mode="popLayout">
+                {layoutPlan.secondary.map((panel) => (
+                  <RegistryContainer key={panel.instanceId} panel={panel} />
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
 
         {/* Right Rail (4 cols): Explainability Log & Active Agents */}
-        <div className="space-y-6 lg:col-span-4">
+        <div className="prism-sidebar space-y-6 lg:col-span-4">
+          <AnimatePresence initial={false} mode="popLayout">
+            {layoutPlan.rail.map((panel) => (
+              <RegistryContainer key={panel.instanceId} panel={panel} />
+            ))}
+          </AnimatePresence>
           <ExplainabilityLog />
           <ActiveAgents />
         </div>
@@ -128,10 +156,104 @@ const MainWorkspaceCanvas: React.FC = () => {
   );
 };
 
+const ProductShowcase: React.FC = () => {
+  const { submitIntent, isAnalyzing } = useWorkspace();
+  const scenarios = [
+    {
+      icon: AudioLines,
+      eyebrow: '01 / CONTEXT',
+      title: 'Walk into every meeting prepared.',
+      detail: 'Bring the client story, recent conversations, and a focused agenda together in one view.',
+      prompt: 'Prepare for my meeting with Acme Corp tomorrow',
+      accent: 'amber',
+    },
+    {
+      icon: ChartNoAxesCombined,
+      eyebrow: '02 / SIGNAL',
+      title: 'Find the story behind every metric.',
+      detail: 'Surface trends, segment shifts, and the signals that explain what changed.',
+      prompt: 'Why did usage drop in Q3?',
+      accent: 'blue',
+    },
+    {
+      icon: ShieldCheck,
+      eyebrow: '03 / MOMENTUM',
+      title: 'Turn overdue work into next steps.',
+      detail: 'Focus on at-risk projects, owners, deadlines, and actions that keep delivery moving.',
+      prompt: 'Show me all overdue projects',
+      accent: 'green',
+    },
+  ];
+
+  return (
+    <section id="features" className="prism-showcase mx-auto max-w-[1600px] px-4 py-24 sm:px-6 md:py-32">
+      <div className="mx-auto mb-12 max-w-2xl text-center">
+        <p className="prism-eyebrow">A clearer way to work</p>
+        <h2 className="font-serif text-4xl italic tracking-tight text-white sm:text-5xl">
+          Pro features. Zero complexity.
+        </h2>
+        <p className="mt-4 text-sm leading-relaxed text-slate-400">
+          One natural request reshapes your workspace around what matters now—without losing the context behind it.
+        </p>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        {scenarios.map(({ icon: Icon, eyebrow, title, detail, prompt, accent }, index) => (
+          <motion.article
+            key={prompt}
+            initial={{ opacity: 0, y: 22 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.45, delay: index * 0.08 }}
+            className={`prism-showcase-card prism-showcase-${accent} flex min-h-[320px] flex-col rounded-2xl border p-6`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-mono tracking-[0.18em] text-slate-400">{eyebrow}</span>
+              <Icon className="h-5 w-5" />
+            </div>
+            <div className="my-8 flex flex-1 flex-col justify-center">
+              <h3 className="max-w-xs font-serif text-3xl italic leading-tight text-white">{title}</h3>
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-slate-400">{detail}</p>
+            </div>
+            <button
+              type="button"
+              disabled={isAnalyzing}
+              onClick={() => {
+                void submitIntent(prompt);
+                document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="inline-flex w-fit items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/10 disabled:opacity-50"
+            >
+              Try this workspace
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </motion.article>
+        ))}
+      </div>
+
+      <div className="mt-20 flex flex-col items-center border-t border-white/10 pt-16 text-center">
+        <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-amber-100/60">
+          The right view. Right when you need it.
+        </span>
+        <h2 className="mt-3 font-serif text-4xl italic text-white sm:text-5xl">
+          You dream it. PRISM shapes it.
+        </h2>
+        <a
+          href="#demo"
+          className="mt-6 inline-flex items-center gap-2 rounded-full bg-[#e9dfcc] px-5 py-2.5 text-xs font-semibold text-[#171613] transition hover:bg-white"
+        >
+          Get started
+          <ArrowRight className="h-3.5 w-3.5" />
+        </a>
+      </div>
+    </section>
+  );
+};
+
 export function App() {
   return (
     <WorkspaceProvider>
-      <div className="relative min-h-screen bg-[#040507] text-zinc-100 font-sans selection:bg-pink-500/30 selection:text-white">
+      <div className="prism-app relative min-h-screen bg-[#040507] text-zinc-100 font-sans selection:bg-pink-500/30 selection:text-white">
         {/* Editorial Ambient Mesh Layer */}
         <div className="pointer-events-none fixed inset-0 ambient-glow-mesh opacity-90" />
 
@@ -140,7 +262,9 @@ export function App() {
           <Navbar />
           <HeaderHero />
           <MainWorkspaceCanvas />
+          <ProductShowcase />
           <QuickActionDock />
+          <ClarifyingModal />
           <ExplainabilityModal />
           <ToastContainer />
         </div>

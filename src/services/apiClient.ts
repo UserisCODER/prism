@@ -1,13 +1,185 @@
 import { ComponentMetadata, IntentParseResult, LayoutPlan, WorkspaceDefinition } from '../types';
-import { parseIntentInput, buildLayoutPlan } from './intentEngine';
+
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
+
+interface BackendIntent {
+  goal: string;
+  domain: string;
+  entities: string[];
+  urgency: IntentParseResult['urgency'];
+  deadline?: string;
+  confidence: number;
+}
+
+interface BackendPanel {
+  component_id: string;
+  reason: string;
+  priority: number;
+  zone: 'hero' | 'primary' | 'secondary' | 'rail';
+}
+
+export type IntentProcessResult =
+  | { clarification: { question: string; options: string[] } }
+  | { intent: IntentParseResult; layout: LayoutPlan };
+
+async function requestApi(path: string, init?: RequestInit): Promise<unknown> {
+  const response = await fetch(`${API_BASE_URL}/api${path}`, init);
+  const text = await response.text();
+  let payload: unknown;
+
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    if (!response.ok) {
+      throw new Error(`PRISM API returned ${response.status}: ${text || response.statusText}`);
+    }
+    throw new Error(`PRISM API returned invalid JSON for ${path}`);
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof payload === 'object' && payload !== null && 'error' in payload &&
+      typeof payload.error === 'string'
+        ? payload.error
+        : response.statusText;
+    throw new Error(`PRISM API returned ${response.status}: ${message}`);
+  }
+
+  return payload;
+}
+
+function postJson(body: unknown): RequestInit {
+  return {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  };
+}
+
+function isBackendPanel(value: unknown): value is BackendPanel {
+  if (typeof value !== 'object' || value === null) return false;
+  const panel = value as Record<string, unknown>;
+  return (
+    typeof panel.component_id === 'string' &&
+    typeof panel.reason === 'string' &&
+    typeof panel.priority === 'number' &&
+    ['hero', 'primary', 'secondary', 'rail'].includes(String(panel.zone))
+  );
+}
+
+function parseBackendIntent(value: unknown): BackendIntent {
+  if (typeof value !== 'object' || value === null) {
+    throw new Error('Intent API returned an invalid intent');
+  }
+  const intent = value as Record<string, unknown>;
+  const urgency = intent.urgency;
+  if (
+    typeof intent.goal !== 'string' ||
+    typeof intent.domain !== 'string' ||
+    !Array.isArray(intent.entities) ||
+    !intent.entities.every((entity) => typeof entity === 'string') ||
+    !['low', 'medium', 'high', 'critical'].includes(String(urgency)) ||
+    typeof intent.confidence !== 'number' ||
+    !Number.isFinite(intent.confidence)
+  ) {
+    throw new Error('Intent API returned an invalid intent shape');
+  }
+
+  return {
+    goal: intent.goal,
+    domain: intent.domain,
+    entities: intent.entities,
+    urgency: urgency as BackendIntent['urgency'],
+    deadline: typeof intent.deadline === 'string' ? intent.deadline : undefined,
+    confidence: intent.confidence,
+  };
+}
+
+function normalizeIntent(rawText: string, intent: BackendIntent): IntentParseResult {
+  return {
+    id: `intent-${Date.now()}`,
+    rawText,
+    goal: intent.goal,
+    domain: intent.domain,
+    entities: intent.entities.map((value) => ({ type: getEntityType(value), value })),
+    urgency: intent.urgency,
+    deadline: intent.deadline,
+    confidence: intent.confidence,
+    missing_info: [],
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function getEntityType(value: string): IntentParseResult['entities'][number]['type'] {
+  const normalized = value.toLowerCase();
+  if (/\b(today|tomorrow|yesterday|q[1-4]|20\d{2})\b/.test(normalized)) return 'date';
+  if (/\b(acme|corp|client|customer|company|labs|inc)\b/.test(normalized)) return 'client';
+  if (/\b(usage|revenue|arr|metric|drop|growth|rate|percentage)\b/.test(normalized)) return 'metric';
+  if (/\b(project|task|milestone|delivery)\b/.test(normalized)) return 'project';
+  if (/\b(smb|enterprise|segment)\b/.test(normalized)) return 'segment';
+  return 'status';
+}
+
+function createLayoutPlan(
+  panels: BackendPanel[],
+  intent: IntentParseResult,
+  pinnedIds: string[] = []
+): LayoutPlan {
+  if (panels.length === 0 || panels.filter((panel) => panel.zone === 'hero').length !== 1) {
+    throw new Error('Layout API must return panels with exactly one hero zone');
+  }
+
+  const toPanel = (panel: BackendPanel) => ({
+    instanceId: panel.component_id,
+    component_id: panel.component_id,
+    zone: panel.zone,
+    colSpan:
+      panel.zone === 'hero'
+        ? 12
+        : panel.zone === 'primary'
+          ? 8
+          : panel.zone === 'secondary'
+            ? 6
+            : 4,
+    reason: panel.reason,
+    priority: panel.priority,
+    params: {},
+    isPinned: pinnedIds.includes(panel.component_id),
+  });
+  const mapped = panels.map(toPanel);
+  const hero = mapped.find((panel) => panel.zone === 'hero');
+
+  return {
+    layout_id: `layout-${Date.now()}`,
+    intent_id: intent.id,
+    scenarioName: intent.goal,
+    hero,
+    primary: mapped.filter((panel) => panel.zone === 'primary'),
+    secondary: mapped.filter((panel) => panel.zone === 'secondary'),
+    rail: mapped.filter((panel) => panel.zone === 'rail'),
+    summaryReason: hero?.reason ?? intent.goal,
+    alignmentScore: Math.round(intent.confidence * 100),
+    freshnessScore: 98,
+    hallucinationRisk: Math.max(1, 100 - Math.round(intent.confidence * 100)),
+    pinnedIds: mapped.filter((panel) => panel.isPinned).map((panel) => panel.instanceId),
+  };
+}
+
+function flattenLayout(plan: LayoutPlan): BackendPanel[] {
+  return [plan.hero, ...plan.primary, ...plan.secondary, ...plan.rail]
+    .filter((panel): panel is NonNullable<typeof panel> => panel !== undefined)
+    .map((panel) => ({
+      component_id: panel.component_id,
+      reason: panel.reason,
+      priority: panel.priority,
+      zone: panel.zone,
+    }));
+}
 
 export async function fetchWorkspaceComponents(
   domain: string
 ): Promise<Record<string, ComponentMetadata>> {
-  const res = await fetch(`/api/workspace?domain=${encodeURIComponent(domain)}`);
-  if (!res.ok) throw new Error(`Workspace API returned ${res.status}`);
-
-  const data: unknown = await res.json();
+  const data = await requestApi(`/workspace?domain=${encodeURIComponent(domain)}`);
   if (!isWorkspaceResponse(data)) {
     throw new Error('Workspace API returned an invalid component registry');
   }
@@ -45,78 +217,117 @@ function isWorkspaceResponse(
   );
 }
 
-/**
- * PRISM API Integration Service Layer
- * 
- * BACKEND TEAM NOTE:
- * When your team creates real API routes (e.g. Next.js / Supabase / Gemini server endpoints),
- * simply set USE_REAL_BACKEND = true and update the fetch URLs below!
- */
-export const USE_REAL_BACKEND = false; // Set to true when backend API is live
-
 export async function processUserIntent(
   rawInput: string,
   currentPlan: LayoutPlan | undefined,
-  workspace: WorkspaceDefinition,
-  registry: Record<string, ComponentMetadata>
-): Promise<{ intent: IntentParseResult; layout: LayoutPlan }> {
-  if (USE_REAL_BACKEND) {
-    try {
-      const intentResponse = await fetch('/api/intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          utterance: rawInput,
-          currentLayoutId: currentPlan?.layout_id,
-          workspace: workspace.domain,
-        }),
-      });
-      if (!intentResponse.ok) throw new Error('Intent API returned an error');
-      const { intent } = await intentResponse.json();
-
-      const layoutResponse = await fetch('/api/layout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          intent,
-          workspace: workspace.domain,
-          registry,
-        }),
-      });
-      if (!layoutResponse.ok) throw new Error('Layout API returned an error');
-      const { layout } = await layoutResponse.json();
-
-      return { intent, layout };
-    } catch (err) {
-      console.warn('Backend unavailable, utilizing client-side fallback engine:', err);
-    }
+  workspace: WorkspaceDefinition
+): Promise<IntentProcessResult> {
+  const intentResponse = await requestApi(
+    '/intent',
+    postJson({
+      utterance: rawInput,
+      context: {
+        domain: workspace.domain,
+        pageType: 'dashboard',
+        pageTitle: workspace.name,
+        metaDescription: 'PRISM adaptive workspace demo dashboard',
+      },
+    })
+  );
+  if (typeof intentResponse !== 'object' || intentResponse === null) {
+    throw new Error('Intent API returned an invalid response');
   }
 
-  // Simulate network latency (200ms) matching streaming RSC response timing
-  await new Promise((res) => setTimeout(res, 200));
+  const intentPayload = intentResponse as Record<string, unknown>;
+  if (intentPayload.clarify === true) {
+    if (
+      typeof intentPayload.question !== 'string' ||
+      !Array.isArray(intentPayload.options) ||
+      !intentPayload.options.every((option) => typeof option === 'string')
+    ) {
+      throw new Error('Intent API returned an invalid clarification request');
+    }
+    return {
+      clarification: {
+        question: intentPayload.question,
+        options: intentPayload.options,
+      },
+    };
+  }
 
-  const intent = parseIntentInput(rawInput);
-  const layout = buildLayoutPlan(intent, currentPlan);
+  const intent = parseBackendIntent(intentPayload.intent);
+  const normalizedIntent = normalizeIntent(rawInput, intent);
+  const layoutResponse = await requestApi('/layout', postJson({ intent }));
+  if (
+    typeof layoutResponse !== 'object' ||
+    layoutResponse === null ||
+    !('panels' in layoutResponse) ||
+    !Array.isArray(layoutResponse.panels) ||
+    !layoutResponse.panels.every(isBackendPanel)
+  ) {
+    throw new Error('Layout API returned an invalid panel plan');
+  }
+  if (layoutResponse.panels.some((panel) => panel.reason.trim().toLowerCase() === 'ai layout unavailable')) {
+    throw new Error(
+      'The backend could not generate an AI layout and returned its generic fallback. Check the backend Gemini key or quota, then retry.'
+    );
+  }
 
-  return { intent, layout };
+  let finalPanels = layoutResponse.panels;
+  let pinnedComponentIds = currentPlan?.pinnedIds ?? [];
+  if (currentPlan) {
+    const currentEntries = [currentPlan.hero, ...currentPlan.primary, ...currentPlan.secondary, ...currentPlan.rail]
+      .filter((panel): panel is NonNullable<typeof panel> => panel !== undefined);
+    const currentPanels = flattenLayout(currentPlan);
+    pinnedComponentIds = currentPlan.pinnedIds.map(
+      (id) => currentEntries.find((panel) => panel.instanceId === id)?.component_id ?? id
+    );
+    const deltaResponse = await requestApi(
+      '/delta',
+      postJson({
+        currentLayout: currentPanels,
+        newLayout: layoutResponse.panels,
+        pinnedPanelIds: pinnedComponentIds,
+      })
+    );
+    if (
+      typeof deltaResponse !== 'object' ||
+      deltaResponse === null ||
+      !('newPlan' in deltaResponse) ||
+      !Array.isArray(deltaResponse.newPlan) ||
+      !deltaResponse.newPlan.every(isBackendPanel)
+    ) {
+      throw new Error('Delta API returned an invalid panel plan');
+    }
+    finalPanels = deltaResponse.newPlan;
+  }
+
+  return {
+    intent: normalizedIntent,
+    layout: createLayoutPlan(finalPanels, normalizedIntent, pinnedComponentIds),
+  };
+}
+
+export async function fetchPanelReason(panelId: string): Promise<string> {
+  const response = await requestApi(`/why/${encodeURIComponent(panelId)}`);
+  if (
+    typeof response !== 'object' ||
+    response === null ||
+    !('reason' in response) ||
+    typeof response.reason !== 'string'
+  ) {
+    throw new Error(`Explainability API returned an invalid reason for ${panelId}`);
+  }
+  return response.reason;
 }
 
 export async function executePanelAction(
   actionType: string,
   payload: Record<string, any>
 ): Promise<{ success: boolean; message: string }> {
-  if (USE_REAL_BACKEND) {
-    const res = await fetch('/api/action', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ actionType, payload }),
-    });
-    return res.json();
-  }
-
   await new Promise((res) => setTimeout(res, 150));
   return {
     success: true,
-    message: `Action "${actionType}" committed successfully to Postgres mock DB.`,
+    message: `"${actionType}" was staged as a demo action. This backend does not expose an action endpoint.`,
   };
 }

@@ -9,7 +9,7 @@ export interface IntentParseResult {
   id: string;
   rawText: string;
   goal: string;
-  domain: 'sales' | 'growth' | 'delivery' | 'general';
+  domain: string;
   entities: EntityTag[];
   urgency: UrgencyLevel;
   deadline?: string;

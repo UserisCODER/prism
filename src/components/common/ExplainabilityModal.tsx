@@ -1,9 +1,9 @@
 import React from 'react';
-import { HelpCircle, ShieldCheck, Database, Check, X } from 'lucide-react';
+import { HelpCircle, ShieldCheck, Database, Check, X, LoaderCircle } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const ExplainabilityModal: React.FC = () => {
-  const { explainModalPanel, closeExplainModal } = useWorkspace();
+  const { explainModalPanel, closeExplainModal, isLoadingExplanation } = useWorkspace();
 
   if (!explainModalPanel) return null;
 
@@ -39,7 +39,14 @@ export const ExplainabilityModal: React.FC = () => {
 
         <div className="mt-4 rounded-xl border border-white/10 bg-white/5 p-4 text-xs font-sans text-slate-200 leading-relaxed">
           <strong className="text-white block mb-1">Reason for Composition:</strong>
-          {explainModalPanel.reason}
+          {isLoadingExplanation ? (
+            <span className="inline-flex items-center gap-2 text-slate-400">
+              <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+              Loading the backend explanation…
+            </span>
+          ) : (
+            explainModalPanel.reason
+          )}
         </div>
 
         <div className="mt-4 space-y-2.5 text-xs font-mono">

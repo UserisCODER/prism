@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState } from 'react';
 import { ComponentMetadata, IntentParseResult, LayoutPlan, PanelPlan, WorkspaceDefinition } from '../types';
-import { executePanelAction, fetchWorkspaceComponents, processUserIntent } from '../services/apiClient';
+import {
+  executePanelAction,
+  fetchPanelReason,
+  fetchWorkspaceComponents,
+  processUserIntent,
+} from '../services/apiClient';
 import { parseIntentInput, buildLayoutPlan } from '../services/intentEngine';
 import { COMPONENT_REGISTRY } from '../data/componentCatalog';
 import { WORKSPACES } from '../data/workspaces';
@@ -19,10 +24,12 @@ interface WorkspaceContextType {
   activeRegistry: Record<string, ComponentMetadata>;
   isLoadingWorkspace: boolean;
   isAnalyzing: boolean;
+  isLoadingExplanation: boolean;
   toasts: Toast[];
   pinnedIds: string[];
   undoStack: LayoutPlan[];
   explainModalPanel: PanelPlan | null;
+  resolveClarification: (option: string) => void;
   showClarifyingModal: boolean;
   submitIntent: (input: string) => Promise<void>;
   selectWorkspace: (workspace: WorkspaceDefinition) => Promise<void>;
@@ -50,6 +57,8 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [undoStack, setUndoStack] = useState<LayoutPlan[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
+  const [isLoadingExplanation, setIsLoadingExplanation] = useState<boolean>(false);
+  const [clarificationInput, setClarificationInput] = useState('');
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [explainModalPanel, setExplainModalPanel] = useState<PanelPlan | null>(null);
   const [showClarifyingModal, setShowClarifyingModal] = useState<boolean>(false);
@@ -75,7 +84,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       addToast('Workspace Connected', `Loaded components for ${workspace.name}.`, 'success');
     } catch (err) {
       console.error('Failed to load workspace components:', err);
-      addToast('Workspace Error', `Failed to load components for ${workspace.name}.`, 'warning');
+      addToast(
+        'Workspace Error',
+        err instanceof Error ? err.message : `Failed to load ${workspace.name}.`,
+        'warning'
+      );
     } finally {
       setIsLoadingWorkspace(false);
     }
@@ -85,23 +98,31 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!input.trim()) return;
     setIsAnalyzing(true);
     try {
-      const { intent, layout } = await processUserIntent(
+      const result = await processUserIntent(
         input,
         layoutPlan,
-        activeWorkspace,
-        activeRegistry
+        activeWorkspace
       );
 
+      if ('clarification' in result) {
+        setClarificationInput(input);
+        setCurrentIntent((previous) => ({
+          ...previous,
+          rawText: input,
+          clarifying_question: result.clarification.question,
+          clarifying_options: result.clarification.options,
+        }));
+        setShowClarifyingModal(true);
+        return;
+      }
+
+      const { intent, layout } = result;
       // Save current layout to undo stack
       setUndoStack((prev) => [layoutPlan, ...prev].slice(0, 5));
       setCurrentIntent(intent);
       setLayoutPlan(layout);
-
-      if (intent.confidence < 0.85 && intent.clarifying_question) {
-        setShowClarifyingModal(true);
-      } else {
-        setShowClarifyingModal(false);
-      }
+      setPinnedIds(layout.pinnedIds);
+      setShowClarifyingModal(false);
 
       addToast(
         'Workspace Re-arranged',
@@ -109,7 +130,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         'info'
       );
     } catch (err) {
-      addToast('Synthesis Error', 'Failed to parse intent. Reverting to safe layout.', 'warning');
+      console.error('Failed to adapt workspace to intent:', err);
+      addToast(
+        'Workspace Update Failed',
+        err instanceof Error ? err.message : 'The request could not be completed.',
+        'warning'
+      );
     } finally {
       setIsAnalyzing(false);
     }
@@ -138,6 +164,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         hero: updatePanel(prev.hero),
         primary: prev.primary.map((p) => (p.instanceId === instanceId ? { ...p, isPinned: isPinnedNow } : p)),
         secondary: prev.secondary.map((p) => (p.instanceId === instanceId ? { ...p, isPinned: isPinnedNow } : p)),
+        rail: prev.rail.map((p) => (p.instanceId === instanceId ? { ...p, isPinned: isPinnedNow } : p)),
         pinnedIds: isPinnedNow ? [...prev.pinnedIds, instanceId] : prev.pinnedIds.filter(id => id !== instanceId),
       };
     });
@@ -148,6 +175,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const previous = undoStack[0];
     setUndoStack((prev) => prev.slice(1));
     setLayoutPlan(previous);
+    setPinnedIds(previous.pinnedIds);
     addToast('Layout Restored', 'Reverted to previous layout state.', 'info');
   };
 
@@ -161,8 +189,24 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     addToast('Workspace Reset', 'Reverted to generic executive review mode.', 'info');
   };
 
-  const openExplainModal = (panel: PanelPlan) => {
+  const openExplainModal = async (panel: PanelPlan) => {
     setExplainModalPanel(panel);
+    setIsLoadingExplanation(true);
+    try {
+      const reason = await fetchPanelReason(panel.component_id);
+      setExplainModalPanel((current) =>
+        current?.instanceId === panel.instanceId ? { ...current, reason } : current
+      );
+    } catch (err) {
+      console.error(`Failed to load explanation for ${panel.component_id}:`, err);
+      addToast(
+        'Explanation Unavailable',
+        err instanceof Error ? err.message : 'Could not retrieve the panel explanation.',
+        'warning'
+      );
+    } finally {
+      setIsLoadingExplanation(false);
+    }
   };
 
   const closeExplainModal = () => {
@@ -173,11 +217,16 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setShowClarifyingModal(false);
   };
 
+  const resolveClarification = (option: string) => {
+    setShowClarifyingModal(false);
+    void submitIntent(`${clarificationInput} — ${option}`);
+  };
+
   const triggerAction = async (actionName: string, details: string) => {
-    addToast('Executing Action', `Submitting "${actionName}" to database...`, 'info');
+    addToast('Preparing Demo Action', `Staging "${actionName}" for the demo...`, 'info');
     const result = await executePanelAction(actionName, { details });
     if (result.success) {
-      addToast('Action Completed', result.message, 'success');
+      addToast('Demo Action Staged', result.message, 'success');
     }
   };
 
@@ -190,10 +239,12 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         activeRegistry,
         isLoadingWorkspace,
         isAnalyzing,
+        isLoadingExplanation,
         toasts,
         pinnedIds,
         undoStack,
         explainModalPanel,
+        resolveClarification,
         showClarifyingModal,
         submitIntent,
         selectWorkspace,

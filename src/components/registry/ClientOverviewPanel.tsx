@@ -3,7 +3,10 @@ import { HelpCircle, CheckCircle, GitBranch, ShieldAlert } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const ClientOverviewPanel: React.FC<{ clientId?: string }> = () => {
-  const { openExplainModal } = useWorkspace();
+  const { openExplainModal, currentIntent } = useWorkspace();
+  const clientName =
+    currentIntent.entities.find((entity) => entity.type === 'client')?.value ??
+    (currentIntent.rawText.toLowerCase().includes('acme') ? 'Acme Corp' : 'Meridian Labs');
 
   return (
     <div className="rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-6 backdrop-blur-xl shadow-xl">
@@ -39,7 +42,7 @@ export const ClientOverviewPanel: React.FC<{ clientId?: string }> = () => {
       </div>
 
       <p className="mt-3 text-xs md:text-sm text-slate-300 leading-relaxed max-w-3xl">
-        Prioritized based on your 11:30 AM sync with <span className="font-semibold text-white">Meridian Labs</span>. Their token throughput increased <span className="font-bold text-emerald-400">+34% this week</span>, triggering contract renegotiation thresholds. 4 recommended actions were staged below for your authorization.
+        Prioritized based on your 11:30 AM sync with <span className="font-semibold text-white">{clientName}</span>. Their token throughput increased <span className="font-bold text-emerald-400">+34% this week</span>, triggering contract renegotiation thresholds. 4 recommended actions were staged below for your authorization.
       </p>
 
       {/* Linked Metrics Pills */}

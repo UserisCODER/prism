@@ -30,3 +30,9 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## PRISM demo
+
+Run `npm run dev` and open `/demo` to use the adaptive workspace. In development, Vite proxies `/api` requests to the live PRISM backend at `https://prism-topaz-one.vercel.app`.
+
+For a separately deployed frontend, set `VITE_API_BASE_URL` to the backend origin (for example, `https://prism-topaz-one.vercel.app`). The frontend calls `/api/intent`, `/api/layout`, `/api/delta`, `/api/why/[panelId]`, and `/api/workspace`.

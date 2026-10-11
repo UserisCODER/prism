@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Mic, MicOff, ArrowRight, Sparkles, AlertCircle, RefreshCw } from 'lucide-react';
+import { Mic, ArrowRight, Sparkles, RefreshCw } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const IntentBar: React.FC = () => {
-  const { submitIntent, isAnalyzing, currentIntent } = useWorkspace();
+  const { submitIntent, isAnalyzing } = useWorkspace();
   const [inputText, setInputText] = useState<string>('');
   const [isListening, setIsListening] = useState<boolean>(false);
   const [speechSupported, setSpeechSupported] = useState<boolean>(true);
@@ -85,7 +85,7 @@ export const IntentBar: React.FC = () => {
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
-          placeholder="Prepare tomorrow's client review with Meridian Labs or speak a goal..."
+          placeholder="Tell PRISM what you want to get done..."
           className="w-full bg-transparent px-4 font-sans text-sm md:text-base text-slate-100 placeholder-slate-400 focus:outline-none"
         />
 
@@ -102,7 +102,7 @@ export const IntentBar: React.FC = () => {
               }`}
               title={isListening ? 'Listening... click to stop' : 'Start voice input (Web Speech API)'}
             >
-              {isListening ? <Mic className="h-5 w-5 animate-bounce" /> : <MicOff className="h-5 w-5" />}
+              <Mic className={`h-5 w-5 ${isListening ? 'animate-bounce' : ''}`} />
             </button>
           )}
 
@@ -127,38 +127,20 @@ export const IntentBar: React.FC = () => {
           PROMPT SUGGESTIONS:
         </span>
 
-        <button
-          onClick={() => handleSuggestionClick("Prepare tomorrow's client meeting")}
-          className="flex items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/10 px-3 py-1 text-slate-200 transition-all hover:border-rose-400 hover:bg-rose-500/20"
-        >
-          <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-          <span>Prepare tomorrow's client meeting</span>
-          <span className="rounded-full bg-rose-500/20 px-1.5 py-0.5 text-[10px] font-mono text-rose-300">
-            92% conf
-          </span>
-        </button>
-
-        <button
-          onClick={() => handleSuggestionClick("Investigate SMB usage drop")}
-          className="flex items-center gap-2 rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-slate-200 transition-all hover:border-indigo-400 hover:bg-indigo-500/20"
-        >
-          <span>📊 Investigate SMB usage drop</span>
-        </button>
-
-        <button
-          onClick={() => handleSuggestionClick("Review overdue milestones")}
-          className="flex items-center gap-2 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-slate-200 transition-all hover:border-amber-400 hover:bg-amber-500/20"
-        >
-          <span>⏳ Review overdue milestones</span>
-        </button>
-
-        <button
-          onClick={() => handleSuggestionClick("meeting")}
-          className="flex items-center gap-2 rounded-full border border-purple-500/30 bg-purple-500/10 px-3 py-1 text-slate-200 transition-all hover:border-purple-400 hover:bg-purple-500/20"
-          title="Test ambiguity clarifying question"
-        >
-          <span>❓ Test Clarification Flow</span>
-        </button>
+        {[
+          'Prepare for my meeting with Acme Corp tomorrow',
+          'Why did usage drop in Q3?',
+          'Show me all overdue projects',
+        ].map((suggestion) => (
+          <button
+            key={suggestion}
+            disabled={isAnalyzing}
+            onClick={() => handleSuggestionClick(suggestion)}
+            className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-left text-slate-300 transition-all hover:border-amber-200/30 hover:bg-amber-100/[0.07] hover:text-white disabled:cursor-wait disabled:opacity-50"
+          >
+            {suggestion}
+          </button>
+        ))}
       </div>
     </div>
   );
