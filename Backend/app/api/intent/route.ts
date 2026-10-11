@@ -46,7 +46,12 @@ Rules:
    - Set confidence >= 0.65 (typically 0.85-0.95).
    - Set question to null and options to null.
 3. For any input where a domain and goal can be reasonably inferred, return clarify: false with confidence >= 0.65.
-4. Return ONLY valid JSON with no markdown wrapping or additional text.`,
+4. You must also check if the user's intent matches the current page context.
+   - If the user is on github.com and their intent is about code review, pull requests, issues, or CI — proceed normally.
+   - If the user is on notion.so and their intent is about tasks, projects, or notes — proceed normally.
+   - If the user is on salesforce.com and their intent is about meetings, clients, or CRM — proceed normally.
+   - If the intent does NOT match the page context, return clarify: true with a question asking the user to confirm their intent, and provide 2-3 relevant options based on what they could do on the current page.
+5. Return ONLY valid JSON with no markdown wrapping or additional text.`,
       generationConfig: {
         temperature: 0.1,
         responseMimeType: 'application/json',
