@@ -179,42 +179,81 @@ export async function GET(
       return NextResponse.json({ error: 'Workspace ID required' }, { status: 400 });
     }
 
-    // Try fetching from Supabase
-    const { data: ws, error: wsErr } = await supabase
-      .from('workspaces')
-      .select('*')
-      .or(`id.eq.${id},slug.eq.${id}`)
-      .maybeSingle();
+    let ws: Record<string, unknown> | null = null;
+    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-    if (wsErr || !ws) {
-      // Return rich starter bundle
-      return NextResponse.json({ data: getStarterBundle(id), isFallback: true });
+    if (uuidPattern.test(id)) {
+      const { data, error } = await supabase
+        .from('workspaces')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) {
+        console.error('[API/V1/WORKSPACES] Failed to load workspace by id:', error);
+        return NextResponse.json({ error: 'Could not load workspace from the database' }, { status: 500 });
+      }
+      ws = data;
+    }
+
+    if (!ws) {
+      const { data, error } = await supabase
+        .from('workspaces')
+        .select('*')
+        .eq('slug', id)
+        .maybeSingle();
+      if (error && error.code !== '42703') {
+        console.error('[API/V1/WORKSPACES] Failed to load workspace by slug:', error);
+        return NextResponse.json({ error: 'Could not load workspace from the database' }, { status: 500 });
+      }
+      ws = data;
+    }
+
+    if (!ws) {
+      return NextResponse.json({ error: 'Workspace was not found' }, { status: 404 });
     }
 
     // Fetch projects
-    const { data: projects } = await supabase
+    const { data: projects, error: projectsError } = await supabase
       .from('workspace_projects')
       .select('*')
       .eq('workspace_id', ws.id);
+    if (projectsError) {
+      console.error('[API/V1/WORKSPACES] Failed to load projects:', projectsError);
+      return NextResponse.json({ error: 'Could not load workspace projects from the database' }, { status: 500 });
+    }
 
     const projectIds = (projects || []).map((p) => p.id);
 
     // Fetch nodes
     let nodes: NodeItem[] = [];
     if (projectIds.length > 0) {
-      const { data: nodeData } = await supabase
+      const { data: nodeData, error: nodesError } = await supabase
         .from('node_items')
         .select('*')
         .in('project_id', projectIds)
         .order('order_index', { ascending: true });
+      if (nodesError) {
+        console.error('[API/V1/WORKSPACES] Failed to load project items:', nodesError);
+        return NextResponse.json({ error: 'Could not load project items from the database' }, { status: 500 });
+      }
       nodes = nodeData || [];
     }
 
     // Fetch agents & workflows
-    const [{ data: agents }, { data: workflows }] = await Promise.all([
+    const [
+      { data: agents, error: agentsError },
+      { data: workflows, error: workflowsError },
+    ] = await Promise.all([
       supabase.from('agents').select('*').eq('workspace_id', ws.id),
       supabase.from('workflows').select('*').eq('workspace_id', ws.id),
     ]);
+    if (agentsError || workflowsError) {
+      console.error('[API/V1/WORKSPACES] Failed to load workspace agents or workflows:', {
+        agentsError,
+        workflowsError,
+      });
+      return NextResponse.json({ error: 'Could not load workspace agents and workflows from the database' }, { status: 500 });
+    }
 
     const hydratedProjects = (projects || []).map((p) => ({
       ...p,

@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      // Return node directly in case table is local/in-memory
-      return NextResponse.json({ node: newNode, warning: 'Saved locally' });
+      console.error('[API/V1/NODES] Failed to create node:', error);
+      return NextResponse.json({ error: 'Could not save the task to the database' }, { status: 500 });
     }
 
     return NextResponse.json({ node: data });
@@ -68,10 +68,12 @@ export async function PATCH(req: NextRequest) {
       .maybeSingle();
 
     if (error) {
-      return NextResponse.json({
-        node: { id, ...updatePayload },
-        warning: 'Updated locally',
-      });
+      console.error('[API/V1/NODES] Failed to update node:', error);
+      return NextResponse.json({ error: 'Could not update the task in the database' }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'Task was not found' }, { status: 404 });
     }
 
     return NextResponse.json({ node: data || { id, ...updatePayload } });
@@ -90,7 +92,11 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'Node ID is required' }, { status: 400 });
     }
 
-    await supabase.from('node_items').delete().eq('id', id);
+    const { error } = await supabase.from('node_items').delete().eq('id', id);
+    if (error) {
+      console.error('[API/V1/NODES] Failed to delete node:', error);
+      return NextResponse.json({ error: 'Could not delete the task from the database' }, { status: 500 });
+    }
 
     return NextResponse.json({ success: true, deletedId: id });
   } catch (err: any) {

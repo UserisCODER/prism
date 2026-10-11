@@ -2,34 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { Workspace } from '@/lib/types/workspace';
 
-// Default starter templates if database is empty
-const STARTER_WORKSPACES: Workspace[] = [
-  {
-    id: 'ws-sales-crm',
-    name: 'Sales CRM & Pipeline',
-    slug: 'sales-crm',
-    description: 'Lead scoring, customer deals, and automated follow-ups',
-    icon: 'briefcase',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'ws-growth-dashboard',
-    name: 'Growth & Analytics Portal',
-    slug: 'growth-dashboard',
-    description: 'Track daily active users, retention loops, and growth experiments',
-    icon: 'trending-up',
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'ws-sprint-tracker',
-    name: 'Sprint Tracker & Code Engine',
-    slug: 'sprint-tracker',
-    description: 'Agile sprints, backlog triage, and PR review orchestration',
-    icon: 'terminal',
-    created_at: new Date().toISOString(),
-  },
-];
-
 export async function GET() {
   try {
     const { data, error } = await supabase
@@ -37,30 +9,25 @@ export async function GET() {
       .select('*')
       .order('created_at', { ascending: false });
 
-    if (error || !data || data.length === 0) {
-      return NextResponse.json({
-        workspaces: STARTER_WORKSPACES,
-        isFallback: true,
-      });
+    if (error) {
+      console.error('[API/V1/WORKSPACES] Failed to load workspaces:', error);
+      return NextResponse.json({ error: 'Could not load workspaces from the database' }, { status: 500 });
     }
 
     return NextResponse.json({
-      workspaces: data,
+      workspaces: data ?? [],
       isFallback: false,
     });
-  } catch (err: any) {
-    return NextResponse.json({
-      workspaces: STARTER_WORKSPACES,
-      isFallback: true,
-      error: err?.message,
-    });
+  } catch (error) {
+    console.error('[API/V1/WORKSPACES] Unexpected workspace-list error:', error);
+    return NextResponse.json({ error: 'Could not load workspaces' }, { status: 500 });
   }
 }
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const name = body?.name?.trim();
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
@@ -86,11 +53,13 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      return NextResponse.json({ workspace: newWorkspace, warning: 'Saved locally' });
+      console.error('[API/V1/WORKSPACES] Failed to create workspace:', error);
+      return NextResponse.json({ error: 'Could not save the workspace to the database' }, { status: 500 });
     }
 
     return NextResponse.json({ workspace: data });
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Server error' }, { status: 500 });
+  } catch (error) {
+    console.error('[API/V1/WORKSPACES] Invalid create-workspace request:', error);
+    return NextResponse.json({ error: 'Could not create workspace' }, { status: 500 });
   }
 }

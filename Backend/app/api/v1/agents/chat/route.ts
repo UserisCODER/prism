@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabase } from '@/lib/supabase';
 import { NodeItem } from '@/lib/types/workspace';
@@ -17,6 +17,9 @@ export async function POST(req: NextRequest) {
 
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'Message text is required' }, { status: 400 });
+    }
+    if (!Array.isArray(history) || !Array.isArray(nodes)) {
+      return NextResponse.json({ error: 'history and nodes must be arrays' }, { status: 400 });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -99,12 +102,20 @@ Your responsibilities:
     if (taskMatch && taskMatch[1]) {
       try {
         const parsedTasks = JSON.parse(taskMatch[1]);
-        if (Array.isArray(parsedTasks) && projectId) {
-          createdTasks = parsedTasks.map((t, idx) => ({
+        if (Array.isArray(parsedTasks) && parsedTasks.length > 0) {
+          if (!projectId) {
+            return NextResponse.json(
+              { error: 'The agent suggested tasks, but no project was selected to save them to.' },
+              { status: 400 }
+            );
+          }
+          createdTasks = parsedTasks
+            .filter((task: any) => typeof task?.title === 'string' && task.title.trim())
+            .map((t: any, idx: number) => ({
             id: crypto.randomUUID(),
             project_id: projectId,
             parent_id: null,
-            title: t.title,
+            title: t.title.trim(),
             content: t.content || '',
             status: t.status || 'todo',
             priority: t.priority || 'medium',
@@ -113,8 +124,17 @@ Your responsibilities:
             created_at: new Date().toISOString(),
           }));
 
-          // Try saving to DB
-          await supabase.from('node_items').insert(createdTasks);
+          if (createdTasks.length > 0) {
+            const { data: savedTasks, error: saveError } = await supabase
+              .from('node_items')
+              .insert(createdTasks)
+              .select();
+            if (saveError) {
+              console.error('[API/V1/AGENTS/CHAT] Failed to save agent-created tasks:', saveError);
+              return NextResponse.json({ error: 'The agent replied but its suggested tasks could not be saved.' }, { status: 500 });
+            }
+            createdTasks = savedTasks ?? [];
+          }
         }
       } catch (e) {
         console.warn('Failed to parse suggested tasks JSON:', e);

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   ArrowDown,
@@ -28,12 +28,30 @@ import {
   X,
   Zap,
 } from 'lucide-react';
+import {
+  createTaskadeAgent,
+  createTaskadeNode,
+  createTaskadeWorkflow,
+  fetchTaskadeWorkspace,
+  fetchTaskadeWorkspaces,
+  sendTaskadeAgentMessage,
+  TaskadeAgentRecord,
+  TaskadeModelTier,
+  TaskadeNodeRecord,
+  TaskadePriority,
+  TaskadeProjectRecord,
+  TaskadeStatus,
+  TaskadeWorkflowRecord,
+  TaskadeWorkspaceRecord,
+  updateTaskadeNode,
+  updateTaskadeWorkflow,
+} from '../../services/taskadeApi';
 import './TaskadeWorkspace.css';
 
 type MainSection = 'apps' | 'agents' | 'workflows';
 type ProjectView = 'list' | 'board' | 'mindmap' | 'table' | 'calendar';
-type TaskStatus = 'todo' | 'in_progress' | 'review' | 'done';
-type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+type TaskStatus = TaskadeStatus;
+type TaskPriority = TaskadePriority;
 
 interface TaskItem {
   id: string;
@@ -48,11 +66,12 @@ interface TaskItem {
 
 interface AgentProfile {
   id: string;
+  workspaceId?: string;
   name: string;
   description: string;
   persona: string;
   systemPrompt: string;
-  tier: string;
+  tier: TaskadeModelTier;
   initials: string;
   color: string;
   skills: string[];
@@ -60,90 +79,30 @@ interface AgentProfile {
 
 interface WorkflowDefinition {
   id: string;
+  workspaceId?: string;
   name: string;
   description: string;
   trigger: string;
   steps: string[];
   lastRun: string;
-  initialActive: boolean;
+  active?: boolean;
+  initialActive?: boolean;
+  triggerType?: TaskadeWorkflowRecord['trigger_type'];
+  triggerConfig?: Record<string, unknown>;
+  nodes?: TaskadeWorkflowRecord['nodes'];
+  edges?: TaskadeWorkflowRecord['edges'];
+  isFallback?: boolean;
+}
+
+interface ChatMessage {
+  id: string;
+  sender: 'user' | 'agent';
+  text: string;
 }
 
 interface TaskadeWorkspaceProps {
   onOpenAdaptiveCanvas: () => void;
 }
-
-const initialTasks: TaskItem[] = [
-  {
-    id: 'task-1',
-    title: 'Finalize launch messaging',
-    content: 'Align the landing page headline with the product story.',
-    status: 'in_progress',
-    priority: 'high',
-    assignee: 'Maya Chen',
-    dueDate: 'Today',
-    tags: ['Marketing', 'Launch'],
-  },
-  {
-    id: 'task-2',
-    title: 'Review onboarding flow',
-    content: 'Check the first-run experience and activation steps.',
-    status: 'todo',
-    priority: 'medium',
-    assignee: 'Jordan Lee',
-    dueDate: 'Today',
-    tags: ['Product'],
-  },
-  {
-    id: 'task-3',
-    title: 'Prepare launch announcement',
-    content: 'Draft the customer email and social copy.',
-    status: 'review',
-    priority: 'high',
-    assignee: 'Alex Morgan',
-    dueDate: 'Oct 14',
-    tags: ['Marketing'],
-  },
-  {
-    id: 'task-4',
-    title: 'QA the new workspace',
-    content: 'Verify responsive layouts and keyboard interactions.',
-    status: 'todo',
-    priority: 'critical',
-    assignee: 'Sam Rivera',
-    dueDate: 'Oct 15',
-    tags: ['Quality'],
-  },
-  {
-    id: 'task-5',
-    title: 'Collect beta feedback',
-    content: 'Summarize the top themes from early-access users.',
-    status: 'done',
-    priority: 'low',
-    assignee: 'Maya Chen',
-    dueDate: 'Oct 11',
-    tags: ['Research'],
-  },
-  {
-    id: 'task-6',
-    title: 'Publish help center guide',
-    content: 'Document the key steps for new teams.',
-    status: 'in_progress',
-    priority: 'medium',
-    assignee: 'Jordan Lee',
-    dueDate: 'Oct 16',
-    tags: ['Content'],
-  },
-  {
-    id: 'task-7',
-    title: 'Confirm launch checklist',
-    content: 'Review final owners and go-live readiness.',
-    status: 'todo',
-    priority: 'high',
-    assignee: 'Alex Morgan',
-    dueDate: 'Oct 17',
-    tags: ['Operations'],
-  },
-];
 
 const statusLabels: Record<TaskStatus, string> = {
   todo: 'To do',
@@ -153,73 +112,6 @@ const statusLabels: Record<TaskStatus, string> = {
 };
 
 const statusOrder: TaskStatus[] = ['todo', 'in_progress', 'review', 'done'];
-const projectNames = ['Product launch', 'Customer research', 'Q3 planning'];
-
-const agents: AgentProfile[] = [
-  {
-    id: 'research',
-    name: 'Research assistant',
-    description: 'Finds useful context across your notes, tasks, and connected sources.',
-    persona: 'Curious research partner',
-    systemPrompt: 'Find useful context and summarize it with sources.',
-    tier: 'STANDARD',
-    initials: 'RA',
-    color: 'lavender',
-    skills: ['Web research', 'Summaries'],
-  },
-  {
-    id: 'project',
-    name: 'Project coordinator',
-    description: 'Keeps plans clear, tracks blockers, and turns updates into next steps.',
-    persona: 'Organized project coordinator',
-    systemPrompt: 'Track project health and suggest clear next steps.',
-    tier: 'FAST',
-    initials: 'PC',
-    color: 'mint',
-    skills: ['Planning', 'Task updates'],
-  },
-  {
-    id: 'strategy',
-    name: 'Strategy partner',
-    description: 'Helps explore complex questions and organize decisions.',
-    persona: 'Thoughtful strategy partner',
-    systemPrompt: 'Help explore complex questions and structure decisions.',
-    tier: 'REASONING',
-    initials: 'SP',
-    color: 'peach',
-    skills: ['Analysis', 'Decision support'],
-  },
-];
-
-const workflows: WorkflowDefinition[] = [
-  {
-    id: 'weekly-review',
-    name: 'Weekly project review',
-    description: 'Summarize progress and call out items that need attention.',
-    trigger: 'Every Monday · 9:00 AM',
-    steps: ['Schedule trigger', 'Gather project updates', 'Create a summary'],
-    lastRun: 'Today, 9:00 AM',
-    initialActive: true,
-  },
-  {
-    id: 'task-follow-up',
-    name: 'Overdue task follow-up',
-    description: 'Notify task owners when a due date has passed.',
-    trigger: 'When a task becomes overdue',
-    steps: ['Task status change', 'Check due date', 'Notify owner'],
-    lastRun: 'Yesterday, 4:32 PM',
-    initialActive: true,
-  },
-  {
-    id: 'new-feedback',
-    name: 'Route new feedback',
-    description: 'Organize new feedback and send it to the right project.',
-    trigger: 'When feedback is added',
-    steps: ['New item trigger', 'Classify feedback', 'Add to project'],
-    lastRun: 'Oct 9, 11:18 AM',
-    initialActive: false,
-  },
-];
 
 const viewOptions: { id: ProjectView; label: string; icon: typeof List }[] = [
   { id: 'list', label: 'List', icon: List },
@@ -228,6 +120,74 @@ const viewOptions: { id: ProjectView; label: string; icon: typeof List }[] = [
   { id: 'table', label: 'Table', icon: Table2 },
   { id: 'calendar', label: 'Calendar', icon: CalendarDays },
 ];
+
+function formatDueDate(value?: string | null): string {
+  if (!value) return 'No date';
+  const dueDate = new Date(value);
+  if (Number.isNaN(dueDate.getTime())) return value;
+
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+  if (dueDate.toDateString() === today.toDateString()) return 'Today';
+  if (dueDate.toDateString() === tomorrow.toDateString()) return 'Tomorrow';
+  return dueDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function toTaskItem(node: TaskadeNodeRecord): TaskItem {
+  return {
+    id: node.id,
+    title: node.title,
+    content: node.content ?? '',
+    status: node.status,
+    priority: node.priority,
+    assignee: node.assignee || 'Unassigned',
+    dueDate: formatDueDate(node.due_date),
+    tags: node.tags ?? [],
+  };
+}
+
+function toAgentProfile(agent: TaskadeAgentRecord): AgentProfile {
+  const nameParts = agent.name.trim().split(/\s+/);
+  const palette = ['lavender', 'mint', 'peach'];
+  return {
+    id: agent.id,
+    workspaceId: agent.workspace_id,
+    name: agent.name,
+    description: agent.persona,
+    persona: agent.persona,
+    systemPrompt: agent.system_prompt,
+    tier: agent.model_tier,
+    initials: nameParts.slice(0, 2).map((part) => part[0]).join('').toUpperCase(),
+    color: palette[agent.name.length % palette.length],
+    skills: agent.tools_assigned ?? [],
+  };
+}
+
+function toWorkflowDefinition(workflow: TaskadeWorkflowRecord): WorkflowDefinition {
+  const nodeList = Array.isArray(workflow.nodes) ? workflow.nodes : [];
+  const steps = nodeList.map((node) => node.label).filter(Boolean);
+  const triggerLabels: Record<TaskadeWorkflowRecord['trigger_type'], string> = {
+    schedule: 'On a schedule',
+    webhook: 'On a webhook',
+    item_change: 'When a task is updated',
+    manual: 'Run manually',
+  };
+  return {
+    id: workflow.id,
+    workspaceId: workflow.workspace_id,
+    name: workflow.name,
+    description: workflow.description ?? '',
+    trigger: triggerLabels[workflow.trigger_type],
+    steps,
+    lastRun: 'Not run yet',
+    active: workflow.is_active,
+    triggerType: workflow.trigger_type,
+    triggerConfig: workflow.trigger_config ?? {},
+    nodes: nodeList,
+    edges: workflow.edges ?? [],
+  };
+}
 
 const TaskadeLogo: React.FC = () => (
   <span className="td-brand-mark" aria-hidden="true">
@@ -241,10 +201,18 @@ const TaskadeLogo: React.FC = () => (
 export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdaptiveCanvas }) => {
   const [section, setSection] = useState<MainSection>('apps');
   const [view, setView] = useState<ProjectView>('board');
-  const [activeProject, setActiveProject] = useState(projectNames[0]);
-  const [tasks, setTasks] = useState(initialTasks);
-  const [agentList, setAgentList] = useState(agents);
-  const [workflowList, setWorkflowList] = useState(workflows);
+  const [workspaceList, setWorkspaceList] = useState<TaskadeWorkspaceRecord[]>([]);
+  const [activeWorkspace, setActiveWorkspace] = useState<TaskadeWorkspaceRecord | null>(null);
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
+  const [projectList, setProjectList] = useState<TaskadeProjectRecord[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [agentList, setAgentList] = useState<AgentProfile[]>([]);
+  const [workflowList, setWorkflowList] = useState<WorkflowDefinition[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFallback, setIsFallback] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
@@ -252,9 +220,11 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
   const [showWorkflowBuilder, setShowWorkflowBuilder] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [chatAgent, setChatAgent] = useState<string | null>(null);
-  const [activeWorkflows, setActiveWorkflows] = useState(
-    Object.fromEntries(workflows.map(({ id, initialActive }) => [id, initialActive]))
-  );
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const activeProject = projectList.find((project) => project.id === activeProjectId) ?? null;
+  const activeWorkflows = Object.fromEntries(workflowList.map((workflow) => [workflow.id, workflow.active ?? false]));
 
   const filteredTasks = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -266,71 +236,271 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
     );
   }, [search, tasks]);
 
-  const toggleTask = (taskId: string) => {
-    setTasks((current) =>
-      current.map((task) =>
-        task.id === taskId
-          ? { ...task, status: task.status === 'done' ? 'todo' : 'done' }
-          : task
-      )
-    );
+  const applyWorkspaceBundle = (bundle: Awaited<ReturnType<typeof fetchTaskadeWorkspace>>) => {
+    const projects = bundle.projects;
+    const selectedProject = projects[0] ?? null;
+    setActiveWorkspace(bundle.workspace);
+    setProjectList(projects);
+    setActiveProjectId(selectedProject?.id ?? null);
+    setTasks(selectedProject?.nodes.map(toTaskItem) ?? []);
+    setAgentList(bundle.agents.map(toAgentProfile));
+    setWorkflowList(bundle.workflows.map(toWorkflowDefinition));
+    setIsFallback(bundle.isFallback);
   };
 
-  const addTask = (event: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadWorkspaceData = async () => {
+      setIsLoading(true);
+      setApiError(null);
+      try {
+        const workspaces = await fetchTaskadeWorkspaces();
+        if (workspaces.length === 0) {
+          throw new Error('The backend returned no workspaces.');
+        }
+
+        const selectedWorkspace =
+          workspaces.find((workspace) =>
+            `${workspace.slug ?? ''} ${workspace.domain ?? ''} ${workspace.name}`.toLowerCase().match(/sales|crm/)
+          ) ?? workspaces[0];
+        const bundle = await fetchTaskadeWorkspace(selectedWorkspace.id);
+
+        if (!cancelled) {
+          setWorkspaceList(workspaces);
+          applyWorkspaceBundle(bundle);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setApiError(error instanceof Error ? error.message : 'Could not load workspace data.');
+        }
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+
+    void loadWorkspaceData();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const selectWorkspace = async (workspace: TaskadeWorkspaceRecord) => {
+    setWorkspaceMenuOpen(false);
+    setIsLoading(true);
+    setApiError(null);
+    try {
+      const bundle = await fetchTaskadeWorkspace(workspace.id);
+      setWorkspaceList((current) => {
+        if (current.some((item) => item.id === bundle.workspace.id)) return current;
+        return [...current, bundle.workspace];
+      });
+      applyWorkspaceBundle(bundle);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not load this workspace.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const selectProject = (project: TaskadeProjectRecord) => {
+    setActiveProjectId(project.id);
+    setTasks(project.nodes.map(toTaskItem));
+    setView(project.default_view);
+    setMobileNavOpen(false);
+  };
+
+  const toggleTask = async (taskId: string) => {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    setIsSaving(true);
+    setApiError(null);
+    try {
+      const saved = await updateTaskadeNode(taskId, {
+        status: task.status === 'done' ? 'todo' : 'done',
+      });
+      const updatedTask = toTaskItem(saved);
+      setTasks((current) => current.map((item) => item.id === taskId ? updatedTask : item));
+      setProjectList((current) => current.map((project) => project.id === saved.project_id
+        ? { ...project, nodes: project.nodes.map((node) => node.id === taskId ? saved : node) }
+        : project));
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not update this task.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const addTask = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const title = newTaskTitle.trim();
     if (!title) return;
-    setTasks((current) => [
-      {
-        id: `task-${Date.now()}`,
+    if (!activeProjectId) {
+      setApiError('This workspace has no project to save tasks into.');
+      return;
+    }
+    setIsSaving(true);
+    setApiError(null);
+    try {
+      const saved = await createTaskadeNode({
+        project_id: activeProjectId,
         title,
         content: '',
         status: 'todo',
         priority: 'medium',
+        order_index: tasks.length,
         assignee: 'You',
-        dueDate: 'No date',
         tags: [],
-      },
-      ...current,
-    ]);
-    setNewTaskTitle('');
-    setShowTaskForm(false);
+      });
+      const item = toTaskItem(saved);
+      setTasks((current) => [item, ...current]);
+      setProjectList((current) => current.map((project) => project.id === saved.project_id
+        ? { ...project, nodes: [saved, ...project.nodes] }
+        : project));
+      setNewTaskTitle('');
+      setShowTaskForm(false);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not save this task.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const addAgent = (agent: Omit<AgentProfile, 'id' | 'initials' | 'color'>) => {
-    const nameParts = agent.name.trim().split(/\s+/);
-    setAgentList((current) => [
-      ...current,
-      {
-        ...agent,
-        id: `agent-${Date.now()}`,
-        initials: nameParts.slice(0, 2).map((part) => part[0]).join('').toUpperCase(),
-        color: ['lavender', 'mint', 'peach'][current.length % 3],
-      },
-    ]);
-    setShowAgentBuilder(false);
+  const addAgent = async (agent: Omit<AgentProfile, 'id' | 'initials' | 'color'>) => {
+    if (!activeWorkspace) {
+      setApiError('Select a workspace before creating an agent.');
+      return;
+    }
+    setIsSaving(true);
+    setApiError(null);
+    try {
+      const saved = await createTaskadeAgent({
+        workspace_id: activeWorkspace.id,
+        name: agent.name,
+        persona: agent.persona,
+        system_prompt: agent.systemPrompt,
+        model_tier: agent.tier,
+        tools_assigned: agent.skills,
+      });
+      setAgentList((current) => [...current, toAgentProfile(saved)]);
+      setShowAgentBuilder(false);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not save this agent.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const addWorkflow = (workflow: Omit<WorkflowDefinition, 'id' | 'lastRun' | 'initialActive'>) => {
-    const id = `workflow-${Date.now()}`;
-    setWorkflowList((current) => [
-      ...current,
-      { ...workflow, id, lastRun: 'Not run yet', initialActive: false },
-    ]);
-    setActiveWorkflows((current) => ({ ...current, [id]: false }));
-    setShowWorkflowBuilder(false);
+  const addWorkflow = async (workflow: Omit<WorkflowDefinition, 'id' | 'lastRun' | 'initialActive'>) => {
+    if (!activeWorkspace) {
+      setApiError('Select a workspace before creating a workflow.');
+      return;
+    }
+    setIsSaving(true);
+    setApiError(null);
+    try {
+      const saved = await createTaskadeWorkflow({
+        workspace_id: activeWorkspace.id,
+        name: workflow.name,
+        description: workflow.description,
+        trigger_type: workflow.triggerType ?? 'manual',
+        trigger_config: workflow.triggerConfig ?? {},
+        nodes: workflow.nodes ?? [],
+        edges: workflow.edges ?? [],
+        is_active: false,
+      });
+      setWorkflowList((current) => [...current, toWorkflowDefinition(saved)]);
+      setShowWorkflowBuilder(false);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not save this workflow.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const toggleWorkflow = (id: string) => {
-    setActiveWorkflows((current) => ({ ...current, [id]: !current[id] }));
+  const toggleWorkflow = async (id: string) => {
+    const workflow = workflowList.find((item) => item.id === id);
+    if (!workflow || isSaving) return;
+    setIsSaving(true);
+    setApiError(null);
+    try {
+      const saved = await updateTaskadeWorkflow(id, !(workflow.active ?? false));
+      setWorkflowList((current) => current.map((item) =>
+        item.id === id ? toWorkflowDefinition(saved) : item
+      ));
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not update this workflow.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const sendMessage = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const message = chatInput.trim();
+    if (!message || isSendingMessage || !activeWorkspace) return;
+
+    const previousMessages = chatMessages;
+    const userMessage: ChatMessage = {
+      id: `user-${Date.now()}`,
+      sender: 'user',
+      text: message,
+    };
+    setChatMessages((current) => [...current, userMessage]);
+    setChatInput('');
+    setIsSendingMessage(true);
+    setApiError(null);
+
+    try {
+      const selectedAgent = agentList.find((agent) => agent.name === chatAgent);
+      const result = await sendTaskadeAgentMessage({
+        message,
+        agentId: selectedAgent?.id,
+        workspaceId: activeWorkspace.id,
+        projectId: activeProject?.id,
+        history: previousMessages.map(({ sender, text }) => ({ sender, text })),
+        nodes: activeProject?.nodes ?? [],
+      });
+
+      setChatMessages((current) => [
+        ...current,
+        { id: `agent-${Date.now()}`, sender: 'agent', text: result.reply },
+      ]);
+      if (result.createdTasks.length > 0) {
+        const created = result.createdTasks.map(toTaskItem);
+        setTasks((current) => [...created, ...current]);
+        setProjectList((current) => current.map((project) => project.id === activeProject?.id
+          ? { ...project, nodes: [...result.createdTasks, ...project.nodes] }
+          : project));
+      }
+    } catch (error) {
+      const messageText = error instanceof Error ? error.message : 'The agent could not respond.';
+      setApiError(messageText);
+      setChatMessages((current) => [
+        ...current,
+        { id: `error-${Date.now()}`, sender: 'agent', text: `I couldn't complete that request: ${messageText}` },
+      ]);
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
+  const openAgentChat = (name: string) => {
+    setChatMessages([]);
+    setChatAgent(name);
   };
 
   const openCreate = () => {
+    setApiError(null);
     if (section === 'agents') {
       setShowAgentBuilder(true);
     } else if (section === 'workflows') {
       setShowWorkflowBuilder(true);
     } else {
+      if (!activeProjectId) {
+        setApiError('This workspace has no project to add tasks to.');
+        return;
+      }
       setShowTaskForm(true);
     }
   };
@@ -368,14 +538,38 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
           </button>
         </div>
 
-        <button type="button" className="td-workspace-picker">
-          <span className="td-workspace-avatar">P</span>
-          <span className="td-workspace-copy">
-            <strong>Prism Studio</strong>
-            <small>Free workspace</small>
-          </span>
-          <ChevronDown size={15} />
-        </button>
+        <div className="td-workspace-picker-wrap">
+          <button
+            type="button"
+            className="td-workspace-picker"
+            aria-expanded={workspaceMenuOpen}
+            aria-haspopup="listbox"
+            onClick={() => setWorkspaceMenuOpen((open) => !open)}
+          >
+            <span className="td-workspace-avatar">{activeWorkspace?.name.slice(0, 1) ?? 'P'}</span>
+            <span className="td-workspace-copy">
+              <strong>{activeWorkspace?.name ?? (isLoading ? 'Loading workspace…' : 'Workspace unavailable')}</strong>
+              <small>{isFallback ? 'Sample data' : 'Connected workspace'}</small>
+            </span>
+            <ChevronDown size={15} />
+          </button>
+          {workspaceMenuOpen && (
+            <div className="td-workspace-menu" role="listbox" aria-label="Choose a workspace">
+              {workspaceList.map((workspace) => (
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={workspace.id === activeWorkspace?.id}
+                  key={workspace.id}
+                  onClick={() => void selectWorkspace(workspace)}
+                >
+                  <span className="td-workspace-avatar">{workspace.name.slice(0, 1)}</span>
+                  <span><strong>{workspace.name}</strong><small>{workspace.domain ?? workspace.slug ?? 'Workspace'}</small></span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         <button type="button" className="td-create-button" onClick={openCreate}>
           <Plus size={16} />
@@ -392,7 +586,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
           >
             <LayoutGrid size={17} />
             <span>Apps</span>
-            <span className="td-nav-count">8</span>
+            <span className="td-nav-count">{projectList.length}</span>
           </button>
           <button
             type="button"
@@ -401,7 +595,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
           >
             <Bot size={17} />
             <span>Agents</span>
-            <span className="td-nav-count">3</span>
+            <span className="td-nav-count">{agentList.length}</span>
           </button>
           <button
             type="button"
@@ -410,7 +604,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
           >
             <Workflow size={17} />
             <span>Workflows</span>
-            <span className="td-nav-count">3</span>
+            <span className="td-nav-count">{workflowList.length}</span>
           </button>
 
           <div className="td-project-heading">
@@ -419,27 +613,24 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               type="button"
               className="td-small-icon-button"
               aria-label="Create project"
-              onClick={() => {
-                setSection('apps');
-                setShowTaskForm(true);
-              }}
+              onClick={() => openSection('apps')}
             >
               <Plus size={15} />
             </button>
           </div>
-          {projectNames.map((project, index) => (
+          {projectList.map((project, index) => (
             <button
               type="button"
-              key={project}
-              className={`td-project-link ${section === 'apps' && activeProject === project ? 'is-active' : ''}`}
+              key={project.id}
+              className={`td-project-link ${section === 'apps' && activeProjectId === project.id ? 'is-active' : ''}`}
               onClick={() => {
-                setActiveProject(project);
+                selectProject(project);
                 openSection('apps');
               }}
             >
               <span className={`td-project-dot td-project-dot-${index + 1}`} />
-              <span>{project}</span>
-              {index === 0 && <span className="td-project-unread">4</span>}
+              <span>{project.name}</span>
+              <span className="td-project-unread">{project.nodes.length}</span>
             </button>
           ))}
 
@@ -478,7 +669,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
           <div className="td-breadcrumb">
             <span>Prism Studio</span>
             <ChevronRight size={14} />
-            <strong>{section === 'apps' ? activeProject : section === 'agents' ? 'Agents' : 'Workflows'}</strong>
+            <strong>{section === 'apps' ? activeProject?.name ?? 'Projects' : section === 'agents' ? 'Agents' : 'Workflows'}</strong>
           </div>
           <div className="td-topbar-actions">
             <label className="td-search">
@@ -495,7 +686,14 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               <Activity size={17} />
               <span />
             </button>
-            <button type="button" className="td-help-button" onClick={() => setChatAgent('PRISM assistant')}>
+            <button
+              type="button"
+              className="td-help-button"
+              onClick={() => {
+                setChatMessages([]);
+                setChatAgent(agentList[0]?.name ?? 'PRISM assistant');
+              }}
+            >
               <Sparkles size={15} /> Ask PRISM
             </button>
           </div>
@@ -513,26 +711,36 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               <Workflow size={16} /> Workflows
             </button>
             <span className="td-tabs-spacer" />
-            <span className="td-sample-label"><span /> Sample workspace</span>
+            <span className={`td-sample-label ${isFallback ? 'is-fallback' : ''}`}><span />{isFallback ? 'Sample data · backend fallback' : 'Live workspace data'}</span>
           </nav>
 
+          {apiError && (
+            <div className="td-api-alert" role="alert">
+              <strong>Workspace request failed</strong>
+              <span>{apiError}</span>
+            </div>
+          )}
+          {isLoading && <div className="td-data-loading" role="status">Loading workspace data…</div>}
           {section === 'apps' && (
             <AppsSection
-              activeProject={activeProject}
+              activeProject={activeProject?.name ?? 'No project selected'}
               tasks={filteredTasks}
               view={view}
               search={search}
               onViewChange={setView}
               onToggleTask={toggleTask}
-              onAddTask={() => setShowTaskForm(true)}
+              onAddTask={openCreate}
               onOpenAdaptiveCanvas={onOpenAdaptiveCanvas}
             />
           )}
           {section === 'agents' && (
             <AgentsSection
               agents={agentList}
-              onChat={(name) => setChatAgent(name)}
-              onCreate={() => setShowAgentBuilder(true)}
+              onChat={openAgentChat}
+              onCreate={() => {
+                setApiError(null);
+                setShowAgentBuilder(true);
+              }}
               onOpenAdaptiveCanvas={onOpenAdaptiveCanvas}
             />
           )}
@@ -540,14 +748,30 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
             <WorkflowsSection
               workflows={workflowList}
               activeWorkflows={activeWorkflows}
-              onCreate={() => setShowWorkflowBuilder(true)}
+              isSaving={isSaving}
+              onCreate={() => {
+                setApiError(null);
+                setShowWorkflowBuilder(true);
+              }}
               onToggle={toggleWorkflow}
             />
           )}
         </div>
       </div>
 
-      {chatAgent && <AgentDrawer agentName={chatAgent} onClose={() => setChatAgent(null)} />}
+      {chatAgent && (
+        <AgentDrawer
+          agentName={chatAgent}
+          workspaceId={activeWorkspace?.id}
+          nodes={activeProject?.nodes ?? []}
+          messages={chatMessages}
+          input={chatInput}
+          isSending={isSendingMessage}
+          onInputChange={setChatInput}
+          onSend={sendMessage}
+          onClose={() => setChatAgent(null)}
+        />
+      )}
       {showTaskForm && (
         <div className="td-modal-backdrop" role="presentation" onMouseDown={(event) => {
           if (event.target === event.currentTarget) setShowTaskForm(false);
@@ -565,16 +789,18 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               value={newTaskTitle}
               onChange={(event) => setNewTaskTitle(event.target.value)}
               placeholder="Give your task a name"
+              disabled={isSaving}
             />
+            {apiError && <div className="td-form-error" role="alert">{apiError}</div>}
             <div className="td-modal-footer">
-              <span>Adding to <strong>{activeProject}</strong></span>
-              <button type="submit" className="td-primary-button" disabled={!newTaskTitle.trim()}>Create task <ArrowUpRight size={15} /></button>
+              <span>Adding to <strong>{activeProject?.name ?? 'No project'}</strong></span>
+              <button type="submit" className="td-primary-button" disabled={!newTaskTitle.trim() || isSaving || !activeProjectId}>{isSaving ? 'Saving…' : 'Create task'} <ArrowUpRight size={15} /></button>
             </div>
           </form>
         </div>
       )}
-      {showAgentBuilder && <AgentBuilder onClose={() => setShowAgentBuilder(false)} onCreate={addAgent} />}
-      {showWorkflowBuilder && <WorkflowBuilder onClose={() => setShowWorkflowBuilder(false)} onCreate={addWorkflow} />}
+      {showAgentBuilder && <AgentBuilder error={apiError} isSaving={isSaving} onClose={() => setShowAgentBuilder(false)} onCreate={addAgent} />}
+      {showWorkflowBuilder && <WorkflowBuilder error={apiError} isSaving={isSaving} onClose={() => setShowWorkflowBuilder(false)} onCreate={addWorkflow} />}
     </div>
   );
 };
@@ -654,7 +880,12 @@ const AppsSection: React.FC<AppsSectionProps> = ({
 
       {search && <div className="td-search-summary">Showing {tasks.length} results for <strong>“{search}”</strong></div>}
       {tasks.length === 0 ? (
-        <div className="td-empty-state"><Search size={22} /><strong>No matching tasks</strong><span>Try another search term.</span></div>
+        <div className="td-empty-state">
+          {search ? <Search size={22} /> : <List size={22} />}
+          <strong>{search ? 'No matching tasks' : 'No tasks in this project yet'}</strong>
+          <span>{search ? 'Try another search term.' : 'Create a task to start organizing this project.'}</span>
+          {!search && <button type="button" className="td-secondary-button" onClick={onAddTask}><Plus size={14} /> Add task</button>}
+        </div>
       ) : (
         <ProjectViewContent
           tasks={tasks}
@@ -867,11 +1098,12 @@ const AgentsSection: React.FC<{
 interface WorkflowsSectionProps {
   workflows: WorkflowDefinition[];
   activeWorkflows: Record<string, boolean>;
+  isSaving: boolean;
   onCreate: () => void;
   onToggle: (id: string) => void;
 }
 
-const WorkflowsSection: React.FC<WorkflowsSectionProps> = ({ workflows, activeWorkflows, onCreate, onToggle }) => (
+const WorkflowsSection: React.FC<WorkflowsSectionProps> = ({ workflows, activeWorkflows, isSaving, onCreate, onToggle }) => (
   <section className="td-directory-section">
     <div className="td-page-heading">
       <div><div className="td-eyebrow"><Workflow size={14} /> AUTOMATION STUDIO</div><h1>Make the busywork flow.</h1><p>Connect triggers and actions to keep your team's projects moving.</p></div>
@@ -879,8 +1111,8 @@ const WorkflowsSection: React.FC<WorkflowsSectionProps> = ({ workflows, activeWo
     </div>
     <div className="td-workflow-banner">
       <div className="td-workflow-banner-icon"><Zap size={19} /></div>
-      <div><strong>Your workflows, at a glance</strong><p>Review automations and turn them on or off. This preview uses sample workspace data.</p></div>
-      <div className="td-workflow-stats"><span><strong>{Object.values(activeWorkflows).filter(Boolean).length}</strong> active</span><span><strong>{workflows.length * 4}</strong> runs this week</span></div>
+      <div><strong>Your workflows, at a glance</strong><p>Review saved automations and turn them on or off.</p></div>
+      <div className="td-workflow-stats"><span><strong>{Object.values(activeWorkflows).filter(Boolean).length}</strong> active</span><span><strong>—</strong> runs this week</span></div>
     </div>
     <div className="td-workflow-list">
       {workflows.map((flow) => (
@@ -889,7 +1121,7 @@ const WorkflowsSection: React.FC<WorkflowsSectionProps> = ({ workflows, activeWo
           <div className="td-workflow-info"><div className="td-workflow-title-row"><h2>{flow.name}</h2><span className={`td-flow-state ${activeWorkflows[flow.id] ? 'is-active' : ''}`}><span />{activeWorkflows[flow.id] ? 'Active' : 'Paused'}</span></div><p>{flow.description}</p><span className="td-flow-trigger"><Clock3 size={13} />{flow.trigger}</span></div>
           <div className="td-flow-steps">{flow.steps.map((step, index) => <React.Fragment key={step}><span className={index === 0 ? 'is-trigger' : ''}>{index === 0 ? <Zap size={13} /> : index === flow.steps.length - 1 ? <Check size={13} /> : <Settings2 size={13} />}{step}</span>{index < flow.steps.length - 1 && <i />}</React.Fragment>)}</div>
           <div className="td-flow-last-run"><small>LAST RUN</small><span>{flow.lastRun}</span></div>
-          <button type="button" className={`td-toggle ${activeWorkflows[flow.id] ? 'is-on' : ''}`} role="switch" aria-checked={Boolean(activeWorkflows[flow.id])} aria-label={`${activeWorkflows[flow.id] ? 'Pause' : 'Activate'} ${flow.name}`} onClick={() => onToggle(flow.id)}><span /></button>
+          <button type="button" className={`td-toggle ${activeWorkflows[flow.id] ? 'is-on' : ''}`} role="switch" aria-checked={Boolean(activeWorkflows[flow.id])} aria-label={`${activeWorkflows[flow.id] ? 'Pause' : 'Activate'} ${flow.name}`} onClick={() => onToggle(flow.id)} disabled={isSaving}><span /></button>
         </article>
       ))}
     </div>
@@ -897,13 +1129,15 @@ const WorkflowsSection: React.FC<WorkflowsSectionProps> = ({ workflows, activeWo
 );
 
 const AgentBuilder: React.FC<{
+  error: string | null;
+  isSaving: boolean;
   onClose: () => void;
   onCreate: (agent: Omit<AgentProfile, 'id' | 'initials' | 'color'>) => void;
-}> = ({ onClose, onCreate }) => {
+}> = ({ error, isSaving, onClose, onCreate }) => {
   const [name, setName] = useState('');
   const [persona, setPersona] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
-  const [tier, setTier] = useState('STANDARD');
+  const [tier, setTier] = useState<TaskadeModelTier>('STANDARD');
   const [tools, setTools] = useState<string[]>(['Workspace search']);
   const availableTools = ['Workspace search', 'Web search', 'Database query', 'Task updates'];
 
@@ -947,7 +1181,10 @@ const AgentBuilder: React.FC<{
         <textarea id="agent-system-prompt" className="td-builder-textarea" value={systemPrompt} onChange={(event) => setSystemPrompt(event.target.value)} placeholder="Describe how the agent should approach its work…" required />
         <div className="td-builder-split">
           <label className="td-form-label" htmlFor="agent-model">Model tier</label>
-          <select id="agent-model" className="td-builder-select" value={tier} onChange={(event) => setTier(event.target.value)}>
+          <select id="agent-model" className="td-builder-select" value={tier} onChange={(event) => {
+            const nextTier = event.target.value;
+            if (nextTier === 'FAST' || nextTier === 'STANDARD' || nextTier === 'REASONING') setTier(nextTier);
+          }}>
             <option value="FAST">Fast</option>
             <option value="STANDARD">Standard</option>
             <option value="REASONING">Reasoning</option>
@@ -959,9 +1196,10 @@ const AgentBuilder: React.FC<{
             <label key={tool}><input type="checkbox" checked={tools.includes(tool)} onChange={() => toggleTool(tool)} />{tool}</label>
           ))}</div>
         </fieldset>
+        {error && <div className="td-form-error" role="alert">{error}</div>}
         <div className="td-modal-footer">
-          <span>Saved to this sample workspace only.</span>
-          <button type="submit" className="td-primary-button" disabled={!name.trim() || !persona.trim() || !systemPrompt.trim()}>Create agent <ArrowUpRight size={15} /></button>
+          <span>Saved to this workspace.</span>
+          <button type="submit" className="td-primary-button" disabled={!name.trim() || !persona.trim() || !systemPrompt.trim() || isSaving}>{isSaving ? 'Saving…' : 'Create agent'} <ArrowUpRight size={15} /></button>
         </div>
       </form>
     </div>
@@ -969,14 +1207,22 @@ const AgentBuilder: React.FC<{
 };
 
 const WorkflowBuilder: React.FC<{
+  error: string | null;
+  isSaving: boolean;
   onClose: () => void;
   onCreate: (workflow: Omit<WorkflowDefinition, 'id' | 'lastRun' | 'initialActive'>) => void;
-}> = ({ onClose, onCreate }) => {
+}> = ({ error, isSaving, onClose, onCreate }) => {
   const [name, setName] = useState('');
-  const [trigger, setTrigger] = useState('When a task is updated');
+  const [trigger, setTrigger] = useState<TaskadeWorkflowRecord['trigger_type']>('item_change');
   const [action, setAction] = useState('Summarize project progress');
   const [description, setDescription] = useState('');
   const choices = ['Summarize project progress', 'Notify task owner', 'Create a team update'];
+  const triggerLabels: Record<TaskadeWorkflowRecord['trigger_type'], string> = {
+    schedule: 'On a schedule',
+    webhook: 'On a webhook',
+    item_change: 'When a task is updated',
+    manual: 'Run manually',
+  };
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -984,9 +1230,21 @@ const WorkflowBuilder: React.FC<{
     if (!trimmedName) return;
     onCreate({
       name: trimmedName,
-      description: description.trim() || `${action} when ${trigger.toLowerCase()}.`,
-      trigger,
+      description: description.trim() || `${action} when ${triggerLabels[trigger].toLowerCase()}.`,
+      trigger: triggerLabels[trigger],
       steps: [trigger, action, 'Post a workspace update'],
+      triggerType: trigger,
+      triggerConfig: {},
+      nodes: [
+        { id: 'trigger', type: 'trigger', label: triggerLabels[trigger] },
+        { id: 'action', type: 'action', label: action, action },
+        { id: 'output', type: 'action', label: 'Post a workspace update', action: 'workspace_update' },
+      ],
+      edges: [
+        { id: 'trigger-action', source: 'trigger', target: 'action' },
+        { id: 'action-output', source: 'action', target: 'output' },
+      ],
+      active: false,
     });
   };
 
@@ -1002,7 +1260,7 @@ const WorkflowBuilder: React.FC<{
         <div className="td-builder-workspace">
           <div className="td-builder-canvas">
             <div className="td-canvas-label"><span>CANVAS</span><span>Draft workflow</span></div>
-            <div className="td-flow-node td-node-trigger"><span><Zap size={15} /></span><div><small>TRIGGER</small><strong>{trigger}</strong></div><MoreHorizontal size={15} /></div>
+            <div className="td-flow-node td-node-trigger"><span><Zap size={15} /></span><div><small>TRIGGER</small><strong>{triggerLabels[trigger]}</strong></div><MoreHorizontal size={15} /></div>
             <div className="td-node-connector"><i /></div>
             <div className="td-flow-node"><span><Sparkles size={15} /></span><div><small>AI ACTION</small><strong>{action}</strong></div><MoreHorizontal size={15} /></div>
             <div className="td-node-connector"><i /></div>
@@ -1016,36 +1274,81 @@ const WorkflowBuilder: React.FC<{
             <label className="td-form-label td-form-spaced" htmlFor="workflow-description">Description</label>
             <textarea id="workflow-description" className="td-builder-textarea" value={description} onChange={(event) => setDescription(event.target.value)} placeholder="What should this automation do?" />
             <label className="td-form-label td-form-spaced" htmlFor="workflow-trigger">Start when</label>
-            <select id="workflow-trigger" className="td-builder-select" value={trigger} onChange={(event) => setTrigger(event.target.value)}>
-              <option>When a task is updated</option>
-              <option>On a schedule</option>
-              <option>When a new item is created</option>
-              <option>Run manually</option>
+            <select id="workflow-trigger" className="td-builder-select" value={trigger} onChange={(event) => {
+              const nextTrigger = event.target.value;
+              if (nextTrigger === 'schedule' || nextTrigger === 'webhook' || nextTrigger === 'item_change' || nextTrigger === 'manual') {
+                setTrigger(nextTrigger);
+              }
+            }}>
+              <option value="item_change">When a task is updated</option>
+              <option value="schedule">On a schedule</option>
+              <option value="webhook">On a webhook</option>
+              <option value="manual">Run manually</option>
             </select>
             <label className="td-form-label td-form-spaced" htmlFor="workflow-action">Then do</label>
             <select id="workflow-action" className="td-builder-select" value={action} onChange={(event) => setAction(event.target.value)}>
               {choices.map((choice) => <option key={choice}>{choice}</option>)}
             </select>
             <div className="td-builder-backend-note"><Sparkles size={14} /> Execution connects when the workflow backend is ready.</div>
+            {error && <div className="td-form-error" role="alert">{error}</div>}
           </aside>
         </div>
-        <footer className="td-builder-footer"><span>Drafts are stored in this browser preview.</span><div><button type="button" className="td-secondary-button" onClick={onClose}>Cancel</button><button type="submit" className="td-primary-button" disabled={!name.trim()}>Save workflow <ArrowUpRight size={15} /></button></div></footer>
+        <footer className="td-builder-footer"><span>Saved to this workspace.</span><div><button type="button" className="td-secondary-button" onClick={onClose} disabled={isSaving}>Cancel</button><button type="submit" className="td-primary-button" disabled={!name.trim() || isSaving}>{isSaving ? 'Saving…' : 'Save workflow'} <ArrowUpRight size={15} /></button></div></footer>
       </form>
     </div>
   );
 };
 
-const AgentDrawer: React.FC<{ agentName: string; onClose: () => void }> = ({ agentName, onClose }) => (
+interface AgentDrawerProps {
+  agentName: string;
+  workspaceId?: string;
+  nodes: TaskadeNodeRecord[];
+  messages: ChatMessage[];
+  input: string;
+  isSending: boolean;
+  onInputChange: (value: string) => void;
+  onSend: (event: React.FormEvent<HTMLFormElement>) => void;
+  onClose: () => void;
+}
+
+const AgentDrawer: React.FC<AgentDrawerProps> = ({
+  agentName,
+  workspaceId,
+  nodes,
+  messages,
+  input,
+  isSending,
+  onInputChange,
+  onSend,
+  onClose,
+}) => (
   <div className="td-drawer-layer">
     <button type="button" className="td-drawer-backdrop" aria-label="Close assistant" onClick={onClose} />
     <aside className="td-agent-drawer" aria-label={`${agentName} panel`}>
       <header><div><span className="td-drawer-agent-icon"><Sparkles size={17} /></span><div><strong>{agentName}</strong><small><span /> AI assistant</small></div></div><button type="button" className="td-icon-button" aria-label="Close assistant" onClick={onClose}><X size={18} /></button></header>
-      <div className="td-drawer-context"><Sparkles size={15} /><span>Knows about <strong>{projectNames[0]}</strong></span><ChevronDown size={14} /></div>
-      <div className="td-chat-empty"><div className="td-chat-orb"><Sparkles size={22} /></div><h2>What can I help with?</h2><p>Ask a question, explore an idea, or get help moving your project forward.</p>      <div className="td-prompt-chips"><span>Summarize project progress</span><span>What needs attention?</span><span>Help me plan this week</span></div></div>
-      <div className="td-chat-pending"><Sparkles size={15} /><span>Agent chat will be connected by the integration backend.</span></div>
-      <form className="td-chat-composer" onSubmit={(event) => event.preventDefault()}>
-        <textarea aria-label="Message the agent" placeholder="Message your agent…" disabled />
-        <div><button type="button" aria-label="Add attachment" disabled><Plus size={16} /></button><span>Enter to send</span><button className="td-send-button" type="submit" aria-label="Send message" disabled><Send size={15} /></button></div>
+      <div className="td-drawer-context"><Sparkles size={15} /><span>Context from <strong>{nodes.length} project items</strong></span><ChevronDown size={14} /></div>
+      {messages.length === 0 ? (
+        <div className="td-chat-empty"><div className="td-chat-orb"><Sparkles size={22} /></div><h2>What can I help with?</h2><p>Ask a question, explore an idea, or get help moving your project forward.</p><div className="td-prompt-chips"><span>Summarize project progress</span><span>What needs attention?</span><span>Help me plan this week</span></div></div>
+      ) : (
+        <div className="td-chat-messages" aria-live="polite">
+          {messages.map((message) => (
+            <div className={`td-chat-message td-chat-${message.sender}`} key={message.id}>
+              {message.sender === 'agent' && <span className="td-chat-message-icon"><Sparkles size={13} /></span>}
+              <p>{message.text}</p>
+            </div>
+          ))}
+          {isSending && <div className="td-chat-typing" role="status"><span /><span /><span /> {agentName} is thinking…</div>}
+        </div>
+      )}
+      <form className="td-chat-composer" onSubmit={onSend}>
+        <textarea
+          aria-label="Message the agent"
+          placeholder={isSending ? 'Waiting for a response…' : 'Message your agent…'}
+          value={input}
+          onChange={(event) => onInputChange(event.target.value)}
+          disabled={isSending || !workspaceId}
+        />
+        <div><button type="button" aria-label="Add attachment" disabled><Plus size={16} /></button><span>Enter to send</span><button className="td-send-button" type="submit" aria-label="Send message" disabled={!input.trim() || isSending || !workspaceId}><Send size={15} /></button></div>
       </form>
     </aside>
   </div>

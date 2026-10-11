@@ -14,6 +14,20 @@ CREATE TABLE IF NOT EXISTS workspaces (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- The original PRISM schema already has a `workspaces` table. Add the
+-- Taskade fields to it as well as supporting fresh installations.
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS slug TEXT;
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS icon TEXT DEFAULT 'sparkles';
+ALTER TABLE workspaces ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+UPDATE workspaces
+SET slug = regexp_replace(lower(name), '[^a-z0-9]+', '-', 'g') || '-' || left(id::TEXT, 8)
+WHERE slug IS NULL OR btrim(slug) = '';
+
+ALTER TABLE workspaces ALTER COLUMN slug SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_workspaces_slug ON workspaces(slug);
+
 -- 2. Projects within a Workspace
 CREATE TABLE IF NOT EXISTS workspace_projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
