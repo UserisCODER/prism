@@ -5,7 +5,7 @@ import { seededUsageTrend } from '../../data/seededDatabase';
 
 export const UsageTrendChart: React.FC = () => {
   return (
-    <div className="rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-6 backdrop-blur-xl shadow-xl">
+    <div className="rounded-2xl border border-white/10 bg-black p-6 shadow-xl">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>

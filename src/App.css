@@ -107,9 +107,9 @@ button {
   gap: 9px;
   justify-self: start;
   font-size: var(--logo);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: -0.03em;
-  color: #fff;
+  color: #111111;
   cursor: pointer;
   transition: opacity 0.35s ease;
 }
@@ -118,10 +118,12 @@ button {
   opacity: 0.8;
 }
 
-.logo svg {
-  width: var(--logo-mark);
-  height: var(--logo-mark);
-  fill: currentColor;
+.brand-mark {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #111111 0%, #6b7280 100%);
+  box-shadow: 0 0 0 3px rgba(17, 17, 17, 0.08);
 }
 
 .logo-suffix {
@@ -142,9 +144,9 @@ button {
   border-radius: 7px;
   overflow: hidden;
   position: relative;
-  border: 1px solid rgba(198, 198, 198, 0.55);
-  background: linear-gradient(105deg, #050505 0%, #2a2a2a 48%, #4a4a4a 100%);
-  color: #f3f3f3;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: #ffffff;
+  color: #111111;
   font-size: var(--nav);
   font-weight: 400;
   letter-spacing: -0.01em;
@@ -191,9 +193,9 @@ button {
   height: var(--nav-h);
   padding: 0 14px;
   border-radius: 7px;
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.05);
-  color: #e8e8e8;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  background: #ffffff;
+  color: #111111;
   font-size: var(--nav);
   font-weight: 400;
   cursor: pointer;
@@ -368,13 +370,14 @@ body.menu-open .burger-bar:nth-child(3) {
   gap: 8px;
   margin-bottom: 22px;
   padding: 9px 15px;
-  border-radius: 5px;
-  background: linear-gradient(90deg, #7d7d7d 0%, #2a2a2a 52%, #0a0a0a 100%);
-  color: #f2f2f2;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #f5f5f5;
   font-size: var(--badge);
-  font-weight: 400;
+  font-weight: 500;
   letter-spacing: -0.01em;
   opacity: 1;
+  border: 1px solid rgba(255,255,255,0.12);
 }
 
 .badge-star {
@@ -392,7 +395,7 @@ body.menu-open .burger-bar:nth-child(3) {
   font-weight: 500;
   letter-spacing: -0.045em;
   line-height: 1.12;
-  color: #fff;
+  color: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -412,7 +415,7 @@ body.menu-open .burger-bar:nth-child(3) {
   font-size: 1.08em;
   font-weight: 400;
   letter-spacing: -0.03em;
-  color: #9a9a9a;
+  color: #c0d3ef;
   opacity: 1;
 }
 
@@ -420,7 +423,7 @@ body.menu-open .burger-bar:nth-child(3) {
 .lede {
   max-width: var(--lede-max);
   margin-top: 18px;
-  color: #9a9a9a;
+  color: #b8c0d0;
   font-size: var(--lede);
   font-weight: 400;
   line-height: 1.55;
@@ -476,9 +479,9 @@ body.menu-open .burger-bar:nth-child(3) {
 
 /* Solid button */
 .btn-solid {
-  background: linear-gradient(180deg, #ffffff 0%, #e7e7e7 48%, #cfcfcf 100%);
-  color: #111;
-  border: 1px solid #fff;
+  background: linear-gradient(180deg, #ffffff 0%, #ececec 48%, #d9d9d9 100%);
+  color: #111111;
+  border: 1px solid rgba(17, 17, 17, 0.12);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
@@ -494,10 +497,10 @@ body.menu-open .burger-bar:nth-child(3) {
 
 /* Ghost button */
 .btn-ghost {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.45) 50%, rgba(160, 175, 200, 0.08));
-  color: #fff;
-  border: 1px solid rgba(198, 198, 198, 0.45);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 42%, #e7e7e7 100%);
+  color: #111111;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
 .btn-ghost:hover {
@@ -507,8 +510,8 @@ body.menu-open .burger-bar:nth-child(3) {
 }
 
 .hero .btn-ghost {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.5) 46%, rgba(150, 170, 200, 0.1));
-  border: 1px solid rgba(198, 198, 198, 0.55);
+  background: linear-gradient(135deg, #ffffff 0%, #f5f5f5 42%, #e7e7e7 100%);
+  border: 1px solid rgba(17, 17, 17, 0.12);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   height: var(--hero-btn-h);
@@ -1080,8 +1083,8 @@ body.menu-open .burger-bar:nth-child(3) {
 .header {
   position: sticky;
   top: 0;
-  background: rgba(0, 0, 0, 0.82);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid rgba(17, 17, 17, 0.08);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
@@ -1096,8 +1099,9 @@ body.menu-open .burger-bar:nth-child(3) {
   min-height: clamp(620px, calc(100dvh - 72px), 900px);
   padding: 72px 24px 104px;
   background:
-    radial-gradient(ellipse at 50% 39%, rgba(130, 151, 184, 0.09), transparent 42%),
-    radial-gradient(ellipse at 50% 100%, rgba(85, 98, 125, 0.1), transparent 44%);
+    radial-gradient(ellipse at 50% 39%, rgba(130, 151, 184, 0.12), transparent 42%),
+    radial-gradient(ellipse at 50% 100%, rgba(85, 98, 125, 0.1), transparent 44%),
+    #05070b;
 }
 
 .hero::before {
@@ -1106,7 +1110,7 @@ body.menu-open .burger-bar:nth-child(3) {
   inset: 0;
   content: '';
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.7;
   background-image:
     radial-gradient(1px 1px at 9% 17%, rgba(255,255,255,.8) 98%, transparent),
     radial-gradient(1px 1px at 21% 64%, rgba(211,224,246,.7) 98%, transparent),
@@ -1143,8 +1147,8 @@ body.menu-open .burger-bar:nth-child(3) {
   min-height: 280px;
   transform: translateX(-50%);
   pointer-events: none;
-  opacity: 0.52;
-  filter: drop-shadow(0 18px 45px rgba(151, 177, 216, 0.12));
+  opacity: 0.58;
+  filter: drop-shadow(0 18px 45px rgba(142, 169, 212, 0.18));
 }
 
 .prism-bloom {

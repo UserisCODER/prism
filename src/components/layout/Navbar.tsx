@@ -59,19 +59,10 @@ export const Navbar: React.FC = () => {
 
       {/* Header */}
       <header className="header">
-        {/* Left: Logo */}
-        <a href="#top" aria-label="PRISM" className="logo appear appear--scale">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
-            <g transform="rotate(-30 12 12)">
-              <circle cx="7.3" cy="3.2" r="1.45" />
-              <rect x="5.5" y="4.7" width="3.6" height="14.6" rx="1.8" />
-              <rect x="14.9" y="4.7" width="3.6" height="14.6" rx="1.8" />
-              <circle cx="16.7" cy="20.8" r="1.45" />
-            </g>
-          </svg>
-          <span>
-            PRISM<span className="logo-suffix">.ai</span>
-          </span>
+        {/* Left: Brand */}
+        <a href="#top" aria-label="Prism" className="logo appear appear--scale">
+          <span className="brand-mark" aria-hidden="true" />
+          <span>Prism</span>
         </a>
 
         {/* Center: Navigation (hidden on phone) */}

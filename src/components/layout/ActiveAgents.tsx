@@ -27,7 +27,7 @@ export const ActiveAgents: React.FC = () => {
   ];
 
   return (
-    <div className="rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-5 backdrop-blur-xl shadow-xl">
+    <div className="rounded-2xl border border-white/10 bg-black p-5 shadow-xl">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-white/10 pb-3">
         <div className="flex items-center gap-2">

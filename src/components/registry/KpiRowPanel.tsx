@@ -6,9 +6,9 @@ export const KpiRowPanel: React.FC = () => {
     <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       
       {/* Metric 1: ARR REVENUE */}
-      <div className="relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-5 backdrop-blur-xl shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black p-5 shadow-xl">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300">
             ARR REVENUE
           </span>
           <TrendingUp className="h-4 w-4 text-emerald-400" />
@@ -34,9 +34,9 @@ export const KpiRowPanel: React.FC = () => {
       </div>
 
       {/* Metric 2: ACTIVE ACCOUNTS */}
-      <div className="relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-5 backdrop-blur-xl shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black p-5 shadow-xl">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300">
             ACTIVE ACCOUNTS
           </span>
           <Users className="h-4 w-4 text-indigo-400" />
@@ -62,9 +62,9 @@ export const KpiRowPanel: React.FC = () => {
       </div>
 
       {/* Metric 3: ORCHESTRATED TASKS */}
-      <div className="relative overflow-hidden rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-5 backdrop-blur-xl shadow-xl">
+      <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-black p-5 shadow-xl">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300">
             ORCHESTRATED TASKS
           </span>
           <CheckSquare className="h-4 w-4 text-purple-400" />

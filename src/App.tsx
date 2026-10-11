@@ -263,6 +263,12 @@ export function App() {
           <HeaderHero />
           <MainWorkspaceCanvas />
           <ProductShowcase />
+          <footer className="mt-10 border-t border-white/10 bg-black">
+            <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-4 text-xs text-white sm:flex-row">
+              <span>© 2026 Prism. All rights reserved.</span>
+              <span>By Team Er Hustlers</span>
+            </div>
+          </footer>
           <QuickActionDock />
           <ClarifyingModal />
           <ExplainabilityModal />

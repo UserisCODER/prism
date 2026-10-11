@@ -13,7 +13,7 @@ export const TalkingPointsPanel: React.FC = () => {
   ];
 
   return (
-    <div className="rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-6 backdrop-blur-xl shadow-xl">
+    <div className="rounded-2xl border border-white/10 bg-black p-6 shadow-xl">
       <div className="flex items-center justify-between border-b border-white/10 pb-3">
         <div className="flex items-center gap-2">
           <MessageSquareCode className="h-5 w-5 text-indigo-400" />
