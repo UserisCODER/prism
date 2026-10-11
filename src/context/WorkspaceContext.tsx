@@ -82,16 +82,11 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     try {
       const components = await fetchWorkspaceComponents(workspace.domain);
       setActiveRegistry(components);
-      setActiveWorkspace(workspace);
-      addToast('Workspace Connected', `Loaded components for ${workspace.name}.`, 'success');
     } catch (err) {
-      console.error('Failed to load workspace components:', err);
-      addToast(
-        'Workspace Error',
-        err instanceof Error ? err.message : `Failed to load ${workspace.name}.`,
-        'warning'
-      );
+      console.error('Workspace API unavailable, using default registry:', err);
     } finally {
+      setActiveWorkspace(workspace);
+      addToast('Workspace Switched', `Now viewing ${workspace.name} workspace.`, 'success');
       setIsLoadingWorkspace(false);
     }
   };

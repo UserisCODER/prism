@@ -228,6 +228,10 @@ export async function processUserIntent(
       utterance: rawInput,
       context: {
         domain: workspace.domain,
+        suggestedDomain: workspace.domain.includes('github') ? 'github'
+          : workspace.domain.includes('notion') ? 'notion'
+          : workspace.domain.includes('salesforce') ? 'salesforce'
+          : 'general',
         pageType: 'dashboard',
         pageTitle: workspace.name,
         metaDescription: 'PRISM adaptive workspace demo dashboard',
