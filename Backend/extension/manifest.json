@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "PRISM Adaptive Workspace",
+  "version": "1.0.0",
+  "description": "AI-powered adaptive workspace overlay for GitHub",
+  "permissions": ["activeTab", "storage"],
+  "host_permissions": [
+    "https://github.com/*",
+    "https://prism-topaz-one.vercel.app/*",
+    "https://*.salesforce.com/*",
+    "https://*.notion.so/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://github.com/*",
+        "https://*.salesforce.com/*",
+        "https://*.notion.so/*"
+      ],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "PRISM"
+  }
+}

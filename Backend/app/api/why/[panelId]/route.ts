@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getLastEntry } from '@/lib/store';
 
 export const PANEL_REASONS: Record<string, string> = {
   client_overview:
@@ -29,7 +30,7 @@ export const PANEL_REASONS: Record<string, string> = {
 
 export async function GET(
   _request: NextRequest | Request,
-  { params }: { params: Promise<{ panelId: string }> }
+  { params }: { params: Promise<{ panelId: string }> | { panelId: string } }
 ) {
   try {
     const resolvedParams = await params;
@@ -42,19 +43,45 @@ export async function GET(
       );
     }
 
-    if (!(panelId in PANEL_REASONS)) {
-      return NextResponse.json(
-        { error: 'Unknown panel' },
-        { status: 404 }
-      );
+    const entry = getLastEntry();
+    if (entry) {
+      const panels = Array.isArray(entry.panels)
+        ? entry.panels
+        : Array.isArray((entry as any).layout)
+        ? (entry as any).layout
+        : Array.isArray((entry as any).layout?.panels)
+        ? (entry as any).layout.panels
+        : [];
+
+      const panel = panels.find((p: any) => p && p.component_id === panelId);
+
+      if (panel) {
+        const goal =
+          entry.intent && typeof entry.intent === 'object' && 'goal' in entry.intent
+            ? entry.intent.goal
+            : typeof entry.intent === 'string'
+            ? entry.intent
+            : undefined;
+
+        return NextResponse.json({
+          panelId,
+          reason: panel.reason,
+          intent: goal,
+        });
+      }
     }
 
-    const reason = PANEL_REASONS[panelId];
+    if (panelId in PANEL_REASONS) {
+      return NextResponse.json({
+        panelId,
+        reason: PANEL_REASONS[panelId],
+      });
+    }
 
-    return NextResponse.json({
-      panelId,
-      reason,
-    });
+    return NextResponse.json(
+      { error: 'Unknown panel' },
+      { status: 404 }
+    );
   } catch (err: unknown) {
     console.error('[why]', err);
     return NextResponse.json(
@@ -63,3 +90,4 @@ export async function GET(
     );
   }
 }
+

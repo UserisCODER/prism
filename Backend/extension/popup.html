@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRISM</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 280px;
+      background-color: #0d1117;
+      color: #e6edf3;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      padding: 16px;
+      line-height: 1.4;
+      font-size: 13px;
+    }
+    .header {
+      margin-bottom: 12px;
+      border-bottom: 1px solid #21262d;
+      padding-bottom: 10px;
+    }
+    .title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #58a6ff;
+      letter-spacing: 0.5px;
+    }
+    .tagline {
+      font-size: 11px;
+      color: #8b949e;
+      margin-top: 2px;
+    }
+    .shortcut-card {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 6px;
+      padding: 10px;
+      margin-bottom: 14px;
+      font-size: 12px;
+      color: #c9d1d9;
+    }
+    .shortcut-card kbd {
+      background-color: #21262d;
+      border: 1px solid #30363d;
+      border-radius: 4px;
+      box-shadow: inset 0 -1px 0 #30363d;
+      color: #e6edf3;
+      display: inline-block;
+      font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+      font-size: 11px;
+      padding: 2px 5px;
+      font-weight: 600;
+    }
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8b949e;
+      margin-bottom: 8px;
+    }
+    .features-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+    .features-list li {
+      font-size: 12px;
+      color: #c9d1d9;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      line-height: 1.35;
+    }
+    .features-list li .bullet {
+      color: #58a6ff;
+    }
+    .features-list li .arrow {
+      color: #8b949e;
+    }
+    .footer {
+      border-top: 1px solid #21262d;
+      padding-top: 10px;
+      font-size: 11px;
+      color: #8b949e;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background-color: #3fb950;
+      box-shadow: 0 0 6px rgba(63, 185, 80, 0.4);
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">PRISM</div>
+    <div class="tagline">AI-Powered Adaptive Workspace</div>
+  </div>
+
+  <div class="shortcut-card">
+    Press <kbd>Ctrl+Shift+P</kbd> on any GitHub page to toggle the PRISM overlay
+  </div>
+
+  <div class="section-title">Detects</div>
+  <ul class="features-list">
+    <li><span class="bullet">•</span> <span>Pull requests <span class="arrow">→</span> PR review panels</span></li>
+    <li><span class="bullet">•</span> <span>Issues <span class="arrow">→</span> Issue tracking panels</span></li>
+    <li><span class="bullet">•</span> <span>Actions <span class="arrow">→</span> CI/Deploy status panels</span></li>
+  </ul>
+
+  <div class="footer">
+    <span class="status-dot"></span>
+    Active on github.com
+  </div>
+</body>
+</html>
