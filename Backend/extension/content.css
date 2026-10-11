@@ -232,4 +232,19 @@
   cursor: pointer;
 }
 
+.prism-panel.pinned {
+  border-color: #f0883e;
+  box-shadow: 0 0 0 1px #f0883e33;
+}
+
+.prism-pin-btn:hover {
+  background: #2d333b !important;
+  border-color: #f0883e !important;
+}
+
+.prism-panel.pinned .prism-pin-btn {
+  border-color: #f0883e;
+  background: #2d1f0e;
+}
+
 

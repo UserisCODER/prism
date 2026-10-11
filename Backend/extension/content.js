@@ -341,10 +341,61 @@ function createPanelElement(panel, data = lastLayoutData, extraClass = '') {
     }
   });
 
+  const pinBtn = document.createElement('button');
+  pinBtn.innerText = '📌';
+  pinBtn.className = 'prism-pin-btn';
+  pinBtn.title = 'Pin this panel';
+  pinBtn.type = 'button';
+  pinBtn.style.display = 'inline-block';
+  pinBtn.style.marginLeft = '6px';
+  pinBtn.style.padding = '2px 6px';
+  pinBtn.style.fontSize = '10px';
+  pinBtn.style.borderRadius = '10px';
+  pinBtn.style.background = '#21262d';
+  pinBtn.style.border = '1px solid #30363d';
+  pinBtn.style.cursor = 'pointer';
+  pinBtn.style.transition = 'all 0.15s ease';
+
+  try {
+    const storedPinned = localStorage.getItem('prism_pinned_panels');
+    const pinnedList = storedPinned ? JSON.parse(storedPinned) : [];
+    if (Array.isArray(pinnedList) && pinnedList.includes(panel.component_id)) {
+      panelEl.classList.add('pinned');
+      pinBtn.title = 'Unpin this panel';
+    }
+  } catch (err) {
+    console.error('Error reading pinned panels from localStorage:', err);
+  }
+
+  pinBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isPinned = panelEl.classList.toggle('pinned');
+    pinBtn.title = isPinned ? 'Unpin this panel' : 'Pin this panel';
+
+    try {
+      const stored = localStorage.getItem('prism_pinned_panels');
+      let currentPinned = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(currentPinned)) {
+        currentPinned = [];
+      }
+      if (isPinned) {
+        if (!currentPinned.includes(panel.component_id)) {
+          currentPinned.push(panel.component_id);
+        }
+      } else {
+        currentPinned = currentPinned.filter((id) => id !== panel.component_id);
+      }
+      localStorage.setItem('prism_pinned_panels', JSON.stringify(currentPinned));
+    } catch (err) {
+      console.error('Error updating pinned panels in localStorage:', err);
+    }
+  });
+
   panelEl.appendChild(h3);
   panelEl.appendChild(contentEl);
   panelEl.appendChild(span);
   panelEl.appendChild(whyBtn);
+  panelEl.appendChild(pinBtn);
   panelEl.appendChild(whyContainer);
 
   return panelEl;
