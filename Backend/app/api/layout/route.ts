@@ -32,6 +32,13 @@ export const KNOWN_COMPONENT_IDS = [
   'suggested_actions',
   'insight_card',
   'anomaly_callout',
+  'pr_list',
+  'failing_tests',
+  'deploy_status',
+  'issue_tracker',
+  'notion_pages',
+  'notion_tasks',
+  'notion_activity',
 ] as const;
 
 export type ComponentId = (typeof KNOWN_COMPONENT_IDS)[number];
@@ -331,6 +338,8 @@ User Intent:
 ${JSON.stringify(intent, null, 2)}
 ${contextFacts ? `\nREAL DATA FROM DATABASE (use this to write specific, accurate panel reasons):\n${contextFacts}\n` : ''}
 Available component IDs:
+
+CRM / Meetings (use for domain: meetings, analytics, tasks, salesforce):
 - client_overview
 - contact_card
 - recent_communications
@@ -343,6 +352,21 @@ Available component IDs:
 - suggested_actions
 - insight_card
 - anomaly_callout
+
+GitHub / Engineering (use for domain: github, code, engineering):
+- pr_list
+- failing_tests
+- deploy_status
+- issue_tracker
+- suggested_actions
+
+Notion / Docs (use for domain: notion, docs, wiki):
+- notion_pages
+- notion_tasks
+- notion_activity
+- suggested_actions
+
+IMPORTANT: Match the component IDs to the domain. If domain is github or engineering, use ONLY GitHub components. If domain is notion or docs, use ONLY Notion components. Never mix GitHub/Notion components with CRM components.
 
 Rules:
 1. Return a JSON object with a "panels" array.
