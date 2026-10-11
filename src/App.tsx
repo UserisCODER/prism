@@ -108,7 +108,7 @@ const MainWorkspaceCanvas: React.FC = () => {
 
       {/* 12-Column Responsive Grid Canvas matching UI Reference */}
       <div className="prism-dashboard-grid grid grid-cols-1 gap-6 lg:grid-cols-12">
-        
+
         {/* Left Column (8 cols): Hero + Primary + Secondary Panels */}
         <div className="space-y-6 lg:col-span-8">
           {/* Hero Zone */}
