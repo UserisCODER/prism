@@ -1,8 +1,19 @@
+import { useWorkspace } from '../../context/WorkspaceContext';
 import React from 'react';
 import { Table, ArrowDown, ArrowUp } from 'lucide-react';
 import { seededUsageTrend } from '../../data/seededDatabase';
 
 export const SegmentUsageTablePanel: React.FC = () => {
+  const { liveData } = useWorkspace();
+  const rawUsage = liveData?.usage;
+  const tableData = rawUsage && rawUsage.length > 0
+    ? rawUsage.map((r: any) => ({
+        date: r.date,
+        activeUsers: r.activeUsers ?? r.active_users ?? 0,
+        events: r.events ?? 0,
+        segment: r.segment ?? '',
+      }))
+    : seededUsageTrend;
   return (
     <div className="rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-6 backdrop-blur-xl shadow-xl">
       <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -24,7 +35,7 @@ export const SegmentUsageTablePanel: React.FC = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {seededUsageTrend.map((row, idx) => (
+            {tableData.map((row, idx) => (
               <tr key={idx} className="hover:bg-white/5 transition-colors">
                 <td className="py-3 px-3 font-bold text-white">{row.date}</td>
                 <td className="py-3 px-3">

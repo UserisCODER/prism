@@ -1,8 +1,20 @@
+import { useWorkspace } from '../../context/WorkspaceContext';
 import React from 'react';
 import { UserCheck, Mail, PhoneCall } from 'lucide-react';
 import { seededContacts } from '../../data/seededDatabase';
 
 export const ContactCardPanel: React.FC = () => {
+  const { liveData } = useWorkspace();
+  const rawContacts = liveData?.contacts;
+  const contacts = rawContacts && rawContacts.length > 0
+    ? rawContacts.map((c: any) => ({
+        id: c.id,
+        name: c.name ?? 'Unknown',
+        role: c.role ?? c.title ?? '',
+        email: c.email ?? '',
+        sentiment: c.sentiment ?? 'positive',
+      }))
+    : seededContacts;
   return (
     <div className="rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-6 backdrop-blur-xl shadow-xl">
       <div className="flex items-center justify-between border-b border-white/10 pb-3">
@@ -13,7 +25,7 @@ export const ContactCardPanel: React.FC = () => {
       </div>
 
       <div className="mt-4 space-y-3">
-        {seededContacts.map((ct) => (
+        {contacts.map((ct) => (
           <div
             key={ct.id}
             className="flex items-center justify-between rounded-xl border border-white/5 bg-white/5 p-3.5 transition-all hover:bg-white/10"

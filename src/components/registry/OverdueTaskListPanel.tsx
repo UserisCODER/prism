@@ -5,6 +5,18 @@ import { useWorkspace } from '../../context/WorkspaceContext';
 
 export const OverdueTaskListPanel: React.FC = () => {
   const { triggerAction } = useWorkspace();
+  const { liveData } = useWorkspace();
+  const rawTasks = liveData?.tasks;
+  const tasks = rawTasks && rawTasks.length > 0
+    ? rawTasks.map((t: any) => ({
+        id: t.id,
+        title: t.title ?? 'Untitled Task',
+        project: t.project ?? 'Project',
+        assignee: t.assignee ?? 'Unassigned',
+        dueDate: t.dueDate ?? t.due_date ?? 'TBD',
+        status: t.status ?? 'overdue',
+      }))
+    : seededTasks;
 
   return (
     <div className="rounded-2xl border border-indigo-500/30 bg-[#121623]/90 p-6 backdrop-blur-xl shadow-xl">
@@ -16,12 +28,12 @@ export const OverdueTaskListPanel: React.FC = () => {
           <p className="text-xs text-slate-400">Ranked by deadline severity and project owner</p>
         </div>
         <span className="rounded-full bg-rose-500/20 px-3 py-1 text-xs font-mono font-bold text-rose-400 border border-rose-500/30">
-          5 ACTION ITEMS
+          {tasks.length} ACTION ITEMS
         </span>
       </div>
 
       <div className="mt-4 space-y-3">
-        {seededTasks.map((t) => (
+        {tasks.map((t) => (
           <div
             key={t.id}
             className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/5 bg-white/5 p-4 transition-all hover:bg-white/10"
