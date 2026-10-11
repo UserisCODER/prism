@@ -287,6 +287,37 @@ export async function POST(req: NextRequest) {
           parts.push('Recent CI runs:\n' + JSON.stringify(ciResult.data, null, 2));
         }
         contextFacts = parts.join('\n\n');
+      } else if (intent.domain === 'notion' || intent.domain === 'docs' || intent.domain === 'wiki') {
+        const [pagesResult, tasksResult] = await Promise.all([
+          supabase
+            .from('notion_pages')
+            .select('title, status, owner, last_edited, page_type')
+            .order('last_edited', { ascending: false })
+            .limit(5),
+          supabase
+            .from('notion_tasks')
+            .select('title, assignee, status, due_date, priority')
+            .neq('status', 'done')
+            .order('due_date', { ascending: true })
+            .limit(5),
+        ]);
+
+        if (pagesResult.error) console.error('notion_pages error:', pagesResult.error);
+        if (tasksResult.error) console.error('notion_tasks error:', tasksResult.error);
+
+        contextData = {
+          pages: pagesResult.data ?? [],
+          tasks: tasksResult.data ?? [],
+        };
+
+        const parts: string[] = [];
+        if (pagesResult.data && pagesResult.data.length > 0) {
+          parts.push('Recent Notion pages:\n' + JSON.stringify(pagesResult.data, null, 2));
+        }
+        if (tasksResult.data && tasksResult.data.length > 0) {
+          parts.push('Open Notion tasks:\n' + JSON.stringify(tasksResult.data, null, 2));
+        }
+        contextFacts = parts.join('\n\n');
       }
     } catch (dbError) {
       console.error('[API/LAYOUT] Supabase pre-query failed (non-fatal):', dbError);
