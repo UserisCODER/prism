@@ -176,37 +176,33 @@ export async function POST(req: NextRequest) {
 
     try {
       if (intent.domain === 'meetings') {
-        const [meetingsRes, clientsRes, contactsRes] = await Promise.all([
-          supabase
-            .from('meetings')
-            .select('title, scheduled_at, agenda, notes, client_id')
-            .order('scheduled_at', { ascending: true })
-            .limit(5),
-          supabase
-            .from('clients')
-            .select('*')
-            .limit(5),
-          supabase
-            .from('contacts')
-            .select('*')
-            .limit(5),
-        ]);
+        const { data: meetings, error: meetingsError } = await supabase
+          .from('meetings').select('*').limit(5);
+        if (meetingsError) console.error('meetings error:', meetingsError);
+
+        const { data: clients, error: clientsError } = await supabase
+          .from('clients').select('*').limit(5);
+        if (clientsError) console.error('clients error:', clientsError);
+
+        const { data: contacts, error: contactsError } = await supabase
+          .from('contacts').select('*').limit(5);
+        if (contactsError) console.error('contacts error:', contactsError);
 
         contextData = {
-          meetings: meetingsRes.data ?? [],
-          clients: clientsRes.data ?? [],
-          contacts: contactsRes.data ?? [],
+          meetings: meetings ?? [],
+          clients: clients ?? [],
+          contacts: contacts ?? [],
         };
 
         const parts: string[] = [];
-        if (meetingsRes.data && meetingsRes.data.length > 0) {
-          parts.push('Upcoming meetings from database:\n' + JSON.stringify(meetingsRes.data, null, 2));
+        if (meetings && meetings.length > 0) {
+          parts.push('Upcoming meetings from database:\n' + JSON.stringify(meetings, null, 2));
         }
-        if (clientsRes.data && clientsRes.data.length > 0) {
-          parts.push('Clients from database:\n' + JSON.stringify(clientsRes.data, null, 2));
+        if (clients && clients.length > 0) {
+          parts.push('Clients from database:\n' + JSON.stringify(clients, null, 2));
         }
-        if (contactsRes.data && contactsRes.data.length > 0) {
-          parts.push('Contacts from database:\n' + JSON.stringify(contactsRes.data, null, 2));
+        if (contacts && contacts.length > 0) {
+          parts.push('Contacts from database:\n' + JSON.stringify(contacts, null, 2));
         }
         contextFacts = parts.join('\n\n');
       } else if (intent.domain === 'analytics') {
