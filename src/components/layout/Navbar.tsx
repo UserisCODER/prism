@@ -1,38 +1,97 @@
-import React, { useState } from 'react';
-import { Bell, ChevronDown, Sparkles } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Bell, ChevronDown, Menu, X, Sparkles } from 'lucide-react';
 import { useWorkspace } from '../../context/WorkspaceContext';
 import { WORKSPACES } from '../../data/workspaces';
 
 export const Navbar: React.FC = () => {
   const { activeWorkspace, isLoadingWorkspace, selectWorkspace } = useWorkspace();
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+  useEffect(() => {
+    const closeMenuOnResize = () => {
+      if (window.innerWidth >= 901) {
+        setIsMenuOpen(false);
+        document.body.classList.remove('menu-open');
+      }
+    };
+    window.addEventListener('resize', closeMenuOnResize);
+    return () => window.removeEventListener('resize', closeMenuOnResize);
+  }, []);
+
+  const handleNavClick = () => {
+    setIsMenuOpen(false);
+    document.body.classList.remove('menu-open');
+  };
+
+  const handleMenuToggle = () => {
+    const newState = !isMenuOpen;
+    setIsMenuOpen(newState);
+    if (newState) {
+      document.body.classList.add('menu-open');
+    } else {
+      document.body.classList.remove('menu-open');
+    }
+  };
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false);
+        document.body.classList.remove('menu-open');
+      }
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isMenuOpen]);
 
   return (
-    <header className="prism-navbar sticky top-0 z-40 w-full border-b border-white/10 bg-[#0B0D13]/85 backdrop-blur-xl">
-      <div className="prism-navbar-inner mx-auto flex h-16 max-w-[1600px] items-center justify-between gap-3 px-4 sm:px-6">
-        
-        {/* Left Section: Logo */}
-        <div className="flex items-center">
-          <div className="flex items-center gap-3">
-            <div className="prism-brand-mark relative flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 font-bold text-white shadow-lg shadow-indigo-500/25">
-              <span className="font-heading text-xl font-extrabold tracking-wider">P</span>
-              <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-400 ring-2 ring-[#0B0D13]" />
-            </div>
-            <div>
-              <span className="font-heading text-lg font-bold tracking-tight text-white">PRISM</span>
-            </div>
-          </div>
+    <>
+      {/* Menu backdrop (phone only) */}
+      <div
+        className={`menu-backdrop ${isMenuOpen ? 'open' : ''}`}
+        onClick={() => {
+          setIsMenuOpen(false);
+          document.body.classList.remove('menu-open');
+        }}
+        aria-hidden="true"
+      />
 
-        </div>
+      {/* Header */}
+      <header className="header">
+        {/* Left: Logo */}
+        <a href="#top" aria-label="PRISM" className="logo appear appear--scale">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+            <g transform="rotate(-30 12 12)">
+              <circle cx="7.3" cy="3.2" r="1.45" />
+              <rect x="5.5" y="4.7" width="3.6" height="14.6" rx="1.8" />
+              <rect x="14.9" y="4.7" width="3.6" height="14.6" rx="1.8" />
+              <circle cx="16.7" cy="20.8" r="1.45" />
+            </g>
+          </svg>
+          <span>
+            PRISM<span className="logo-suffix">.ai</span>
+          </span>
+        </a>
 
-        {/* Center Section: Navigation Links */}
-        <nav className="hidden items-center gap-1 sm:flex">
-          <a className="prism-nav-link" href="#demo">Workspace</a>
-          <a className="prism-nav-link" href="#features">How it works</a>
+        {/* Center: Navigation (hidden on phone) */}
+        <nav id="site-nav" aria-label="Primary" className={`site-nav ${isMenuOpen ? 'open' : ''}`}>
+          <a href="#top" className="nav-link appear appear--scale" onClick={handleNavClick}>
+            Overview
+          </a>
+          <a href="#workspace" className="nav-link appear appear--soft" onClick={handleNavClick}>
+            Workspace
+          </a>
+          <a href="#features" className="nav-link appear appear--scale" onClick={handleNavClick}>
+            Features
+          </a>
+          <a href="#demo" className="nav-link appear appear--scale" onClick={handleNavClick}>
+            How It Works
+          </a>
         </nav>
 
-        {/* Right Section: Workspace & Notifications */}
-        <div className="flex items-center gap-3">
+        {/* Right: Workspace selector + notifications */}
+        <div className="header-right">
           <div className="relative">
             <button
               type="button"
@@ -40,16 +99,14 @@ export const Navbar: React.FC = () => {
               aria-haspopup="menu"
               disabled={isLoadingWorkspace}
               onClick={() => setIsWorkspaceMenuOpen((open) => !open)}
-              className="prism-workspace-select flex items-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-200 transition-all hover:bg-white/10 disabled:cursor-wait"
+              className="workspace-select appear appear--scale"
             >
-              <Sparkles className="h-3.5 w-3.5 text-amber-700" />
-              <span className="max-w-28 truncate sm:max-w-none">
-                {isLoadingWorkspace ? 'Loading...' : activeWorkspace.name}
-              </span>
-              <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>{isLoadingWorkspace ? 'Loading...' : activeWorkspace.name}</span>
+              <ChevronDown className="h-3.5 w-3.5" />
             </button>
             {isWorkspaceMenuOpen && !isLoadingWorkspace && (
-              <div role="menu" className="prism-workspace-menu absolute right-0 top-full z-50 mt-2 min-w-52 rounded-xl border border-white/10 bg-[#121623] p-1.5 shadow-2xl">
+              <div role="menu" className="workspace-menu">
                 {WORKSPACES.map((workspace) => (
                   <button
                     key={workspace.domain}
@@ -60,7 +117,7 @@ export const Navbar: React.FC = () => {
                       setIsWorkspaceMenuOpen(false);
                       void selectWorkspace(workspace);
                     }}
-                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-slate-200 transition-colors hover:bg-white/10 disabled:text-indigo-300"
+                    className="workspace-item"
                   >
                     <span>{workspace.icon}</span>
                     <span>{workspace.name}</span>
@@ -69,17 +126,30 @@ export const Navbar: React.FC = () => {
               </div>
             )}
           </div>
+
           <button
-            className="prism-icon-button relative rounded-lg p-2 text-slate-500 transition-all hover:bg-black/5 hover:text-slate-900"
+            className="icon-button appear appear--scale"
             title="Notifications"
             aria-label="Notifications"
           >
             <Bell className="h-4 w-4" />
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-amber-600 ring-2 ring-[#f8f7f3]" />
+            <span className="notification-dot" />
+          </button>
+
+          {/* Burger menu (phone only) */}
+          <button
+            className="burger appear appear--scale"
+            onClick={handleMenuToggle}
+            aria-controls="site-nav"
+            aria-expanded={isMenuOpen}
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+          >
+            <span className="burger-bar" />
+            <span className="burger-bar" />
+            <span className="burger-bar" />
           </button>
         </div>
-
-      </div>
-    </header>
+      </header>
+    </>
   );
 };
