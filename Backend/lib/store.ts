@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase'
+
 export interface StoredPanel {
   component_id: string
   reason: string
@@ -13,40 +15,73 @@ export type DebugEntry = {
   timestamp: string
 }
 
-let lastEntry: DebugEntry | null = null
+export async function setLastEntry(intentOrEntry: any, layoutOrPanels?: any): Promise<void> {
+  let intent = intentOrEntry
+  let panels = layoutOrPanels
 
-export function setLastEntry(intentOrEntry: any, layoutOrPanels?: any) {
   if (
     intentOrEntry &&
     typeof intentOrEntry === 'object' &&
     'panels' in intentOrEntry &&
     layoutOrPanels === undefined
   ) {
-    const panelsList = Array.isArray(intentOrEntry.panels) ? intentOrEntry.panels : []
-    lastEntry = {
-      intent: intentOrEntry.intent,
-      layout: intentOrEntry.layout ?? panelsList,
-      panels: panelsList,
-      timestamp: intentOrEntry.timestamp || new Date().toISOString(),
-    }
-    return
+    intent = intentOrEntry.intent
+    panels = intentOrEntry.panels
   }
 
-  const panelsList: StoredPanel[] = Array.isArray(layoutOrPanels)
-    ? layoutOrPanels
-    : Array.isArray(layoutOrPanels?.panels)
-    ? layoutOrPanels.panels
+  const panelsList: StoredPanel[] = Array.isArray(panels)
+    ? panels
+    : Array.isArray(panels?.panels)
+    ? panels.panels
     : []
 
-  lastEntry = {
-    intent: intentOrEntry,
-    layout: layoutOrPanels,
-    panels: panelsList,
-    timestamp: new Date().toISOString(),
+  const timestamp = new Date().toISOString()
+
+  try {
+    const { error } = await supabase
+      .from('last_layout')
+      .upsert({
+        id: 'singleton',
+        intent: intent ?? null,
+        panels: panelsList,
+        timestamp,
+      })
+
+    if (error) {
+      console.error('[store] Failed to save last layout:', error)
+    }
+  } catch (err) {
+    console.error('[store] Error saving last layout:', err)
   }
 }
 
-export function getLastEntry(): DebugEntry | null {
-  return lastEntry
-}
+export async function getLastEntry(): Promise<DebugEntry | null> {
+  try {
+    const { data, error } = await supabase
+      .from('last_layout')
+      .select('intent, panels, timestamp')
+      .eq('id', 'singleton')
+      .maybeSingle()
 
+    if (error || !data || (!data.intent && !data.panels)) {
+      if (error) {
+        console.error('[store] Failed to get last layout:', error)
+      }
+      return null
+    }
+
+    const panelsList: StoredPanel[] = Array.isArray(data.panels)
+      ? data.panels
+      : []
+
+    return {
+      intent: data.intent,
+      layout: panelsList,
+      panels: panelsList,
+      timestamp: data.timestamp ? new Date(data.timestamp).toISOString() : new Date().toISOString(),
+    }
+  } catch (err) {
+    console.error('[store] Error getting last layout:', err)
+    return null
+  }
+}

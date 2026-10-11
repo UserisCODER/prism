@@ -43,8 +43,8 @@ export async function GET(
       );
     }
 
-    const entry = getLastEntry();
-    if (entry) {
+    const entry = await getLastEntry();
+    if (entry && entry.panels) {
       const panels = Array.isArray(entry.panels)
         ? entry.panels
         : Array.isArray((entry as any).layout)

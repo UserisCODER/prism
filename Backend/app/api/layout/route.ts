@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.8-flash',
+      model: 'gemini-3.5-flash-lite',
       generationConfig: {
         temperature: 0.2,
         responseMimeType: 'application/json',
@@ -265,11 +265,11 @@ Rules:
       return NextResponse.json(FALLBACK_LAYOUT);
     }
 
-    setLastEntry(intent, parsed.panels);
+    await setLastEntry(intent, parsed.panels);
     return NextResponse.json(parsed);
   } catch (error: any) {
     console.error('[API/LAYOUT] Error generating layout, returning fallback:', error);
-    setLastEntry(intent, FALLBACK_LAYOUT.panels);
+    await setLastEntry(intent, FALLBACK_LAYOUT.panels);
     return NextResponse.json(FALLBACK_LAYOUT);
   }
 }
