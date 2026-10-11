@@ -1,6 +1,7 @@
 const API_BASE = 'https://prism-topaz-one.vercel.app';
 const WORKSPACE_DOMAIN = 'github.com';
 let currentPanels = [];
+let lastLayoutData = {};
 
 function detectIntent() {
   const url = window.location.href;
@@ -130,6 +131,7 @@ async function fetchLayout(utterance, registry) {
     }
 
     const layoutData = await layoutResponse.json();
+    lastLayoutData = layoutData.data || {};
     return Array.isArray(layoutData.panels) ? layoutData.panels : [];
   } catch (error) {
     console.error('Error fetching layout:', error);
@@ -151,7 +153,13 @@ function removeOverlay() {
   currentPanels = [];
 }
 
-function createPanelElement(panel, extraClass = '') {
+function createPanelElement(panel, data = lastLayoutData, extraClass = '') {
+  if (typeof data === 'string') {
+    extraClass = data;
+    data = lastLayoutData;
+  }
+  const safeData = data || {};
+
   const panelEl = document.createElement('div');
   panelEl.className = extraClass ? `prism-panel ${extraClass}` : 'prism-panel';
   panelEl.dataset.componentId = panel.component_id;
@@ -159,8 +167,95 @@ function createPanelElement(panel, extraClass = '') {
   const h3 = document.createElement('h3');
   h3.textContent = formatComponentId(panel.component_id);
 
-  const p = document.createElement('p');
-  p.textContent = panel.reason || '';
+  let contentEl;
+  switch (panel.component_id) {
+    case 'meeting_prep_brief': {
+      contentEl = document.createElement('div');
+      contentEl.className = 'prism-panel-data';
+      const m = safeData.meetings?.[0];
+      const name = m?.name || m?.title || 'N/A';
+      const scheduled_at = m?.scheduled_at || m?.held_at || m?.date || 'N/A';
+      const attendees = typeof m?.attendees === 'number' ? m.attendees : (m?.attendees?.length || 0);
+      contentEl.innerHTML = `<strong>Meeting:</strong> ${name}<br><strong>Date:</strong> ${scheduled_at}<br><strong>Attendees:</strong> ${attendees}`;
+      break;
+    }
+
+    case 'client_overview': {
+      contentEl = document.createElement('div');
+      contentEl.className = 'prism-panel-data';
+      const c = safeData.clients?.[0];
+      const name = c?.name || 'N/A';
+      const tier = c?.tier || 'Enterprise';
+      const status = c?.status || 'Active';
+      contentEl.innerHTML = `<strong>Client:</strong> ${name}<br><strong>Tier:</strong> ${tier}<br><strong>Status:</strong> ${status}`;
+      break;
+    }
+
+    case 'contact_card': {
+      contentEl = document.createElement('div');
+      contentEl.className = 'prism-panel-data';
+      const contact = safeData.contacts?.[0];
+      const name = contact?.name || 'N/A';
+      const role = contact?.role || 'N/A';
+      const email = contact?.email || 'N/A';
+      contentEl.innerHTML = `<strong>Name:</strong> ${name}<br><strong>Role:</strong> ${role}<br><strong>Email:</strong> ${email}`;
+      break;
+    }
+
+    case 'kpi_row': {
+      contentEl = document.createElement('div');
+      contentEl.className = 'prism-panel-data';
+      const usage = Array.isArray(safeData.usage) ? safeData.usage.slice(-3) : [];
+      contentEl.innerHTML = usage.map((item) => {
+        const metricName = item.metric_name || item.segment || 'Metric';
+        const val = item.value !== undefined ? item.value : (item.active_users ?? item.events ?? 0);
+        return `<div class="prism-kpi-box"><span class="prism-kpi-value">${val}</span>${metricName}</div>`;
+      }).join('');
+      break;
+    }
+
+    case 'task_list': {
+      contentEl = document.createElement('div');
+      contentEl.className = 'prism-panel-data';
+      const tasks = Array.isArray(safeData.tasks) ? safeData.tasks.slice(0, 3) : [];
+      contentEl.innerHTML = tasks.map((task) => {
+        const isChecked = task.status === 'done';
+        const name = task.name || task.title || 'Task';
+        const dueDate = task.due_date ? ` (${task.due_date})` : '';
+        return `<div style="margin-bottom: 4px;"><input type="checkbox" disabled ${isChecked ? 'checked' : ''} style="margin-right: 6px; vertical-align: middle;"><span>${name}</span>${dueDate ? ` <span style="color: #8b949e; font-size: 11px;">${dueDate}</span>` : ''}</div>`;
+      }).join('');
+      break;
+    }
+
+    case 'project_status':
+    case 'project_health_card': {
+      contentEl = document.createElement('div');
+      contentEl.className = 'prism-panel-data';
+      const proj = safeData.projects?.[0];
+      const name = proj?.name || proj?.title || 'N/A';
+      const status = proj?.status || 'Active';
+      const dueDate = proj?.due_date || proj?.deadline || 'N/A';
+      const progress = (status === 'completed' || status === 'done') ? '100%' : '65%';
+      contentEl.innerHTML = `<strong>Project:</strong> ${name}<br><strong>Status:</strong> ${status}<br><strong>Due Date:</strong> ${dueDate}` +
+        `<div style="background: #21262d; border-radius: 4px; height: 6px; width: 100%; margin-top: 8px; overflow: hidden;">` +
+          `<div style="background: #238636; height: 100%; width: ${progress};"></div>` +
+        `</div>`;
+      break;
+    }
+
+    case 'suggested_actions': {
+      contentEl = document.createElement('div');
+      contentEl.className = 'prism-panel-data';
+      contentEl.innerHTML = `<button type="button" class="prism-action-btn">Take Action</button><button type="button" class="prism-action-btn">View Details</button>`;
+      break;
+    }
+
+    default: {
+      contentEl = document.createElement('p');
+      contentEl.textContent = panel.reason || '';
+      break;
+    }
+  }
 
   const span = document.createElement('span');
   span.className = 'prism-zone';
@@ -247,7 +342,7 @@ function createPanelElement(panel, extraClass = '') {
   });
 
   panelEl.appendChild(h3);
-  panelEl.appendChild(p);
+  panelEl.appendChild(contentEl);
   panelEl.appendChild(span);
   panelEl.appendChild(whyBtn);
   panelEl.appendChild(whyContainer);
@@ -361,7 +456,7 @@ function renderPanels(container, panels) {
   const zones = getZoneSections(container);
 
   for (const panel of sortedPanels) {
-    const panelEl = createPanelElement(panel);
+    const panelEl = createPanelElement(panel, lastLayoutData);
     const targetZone = getZoneTarget(panel.zone, zones);
     targetZone.appendChild(panelEl);
   }
@@ -481,6 +576,7 @@ function createOverlay() {
       }
 
       const layoutData = await layoutRes.json();
+      lastLayoutData = layoutData.data || {};
       const newPanels = Array.isArray(layoutData.panels) ? layoutData.panels : [];
 
       if (currentPanels.length > 0) {
@@ -542,7 +638,7 @@ function createOverlay() {
               targetZone.appendChild(existingEl);
             } else {
               // Added panel: render with class "prism-panel-enter"
-              const newEl = createPanelElement(panel, 'prism-panel-enter');
+              const newEl = createPanelElement(panel, lastLayoutData, 'prism-panel-enter');
               targetZone.appendChild(newEl);
             }
           }
