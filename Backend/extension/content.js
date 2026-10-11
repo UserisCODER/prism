@@ -552,6 +552,12 @@ function createOverlay() {
     const value = input.value.trim();
     if (!value) return;
 
+    // Clear previous error message
+    const existingError = overlay.querySelector('.prism-error-msg');
+    if (existingError) {
+      existingError.remove();
+    }
+
     // Show loading
     loading.style.display = 'block';
     input.disabled = true;
@@ -567,7 +573,7 @@ function createOverlay() {
       });
 
       if (!intentRes.ok) {
-        return;
+        throw new Error(`Intent request failed with status ${intentRes.status}`);
       }
 
       const intentData = await intentRes.json();
@@ -623,7 +629,7 @@ function createOverlay() {
       });
 
       if (!layoutRes.ok) {
-        return;
+        throw new Error(`Layout request failed with status ${layoutRes.status}`);
       }
 
       const layoutData = await layoutRes.json();
@@ -704,7 +710,17 @@ function createOverlay() {
         renderPanels(overlay, newPanels);
       }
     } catch (error) {
-      console.error('PRISM intent submit error:', error);
+      console.error(error);
+      loading.style.display = 'none';
+
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'prism-error-msg';
+      errorDiv.textContent = 'Something went wrong. Please try again.';
+      errorDiv.style.color = '#f85149';
+      errorDiv.style.fontSize = '13px';
+      errorDiv.style.marginTop = '12px';
+      errorDiv.style.textAlign = 'center';
+      overlay.appendChild(errorDiv);
     } finally {
       loading.style.display = 'none';
       input.disabled = false;
