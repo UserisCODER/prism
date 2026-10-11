@@ -230,31 +230,47 @@ const ProductShowcase: React.FC = () => {
   );
 };
 
+const AppInner: React.FC = () => {
+  const { activeWorkspace } = useWorkspace();
+
+  if (activeWorkspace.domain === 'github.com') {
+    return (
+      <>
+        <GitHubWorkspaceLayout />
+        <ClarifyingModal />
+        <ExplainabilityModal />
+        <ToastContainer />
+      </>
+    );
+  }
+
+  return (
+    <div className="prism-app relative min-h-screen bg-[#040507] text-zinc-100 font-sans selection:bg-pink-500/30 selection:text-white">
+      <div className="pointer-events-none fixed inset-0 ambient-glow-mesh opacity-90" />
+      <div className="relative z-10 flex min-h-screen flex-col">
+        <Navbar />
+        <HeaderHero />
+        <MainWorkspaceCanvas />
+        <ProductShowcase />
+        <footer className="mt-10 border-t border-white/10 bg-black">
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-4 text-xs text-white sm:flex-row">
+            <span>© 2026 Prism. All rights reserved.</span>
+            <span>By Team Er Hustlers</span>
+          </div>
+        </footer>
+        <QuickActionDock />
+        <ClarifyingModal />
+        <ExplainabilityModal />
+        <ToastContainer />
+      </div>
+    </div>
+  );
+};
+
 export function App() {
   return (
     <WorkspaceProvider>
-      <div className="prism-app relative min-h-screen bg-[#040507] text-zinc-100 font-sans selection:bg-pink-500/30 selection:text-white">
-        {/* Editorial Ambient Mesh Layer */}
-        <div className="pointer-events-none fixed inset-0 ambient-glow-mesh opacity-90" />
-
-        {/* Layout Components */}
-        <div className="relative z-10 flex min-h-screen flex-col">
-          <Navbar />
-          <HeaderHero />
-          <MainWorkspaceCanvas />
-          <ProductShowcase />
-          <footer className="mt-10 border-t border-white/10 bg-black">
-            <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-4 text-xs text-white sm:flex-row">
-              <span>© 2026 Prism. All rights reserved.</span>
-              <span>By Team Er Hustlers</span>
-            </div>
-          </footer>
-          <QuickActionDock />
-          <ClarifyingModal />
-          <ExplainabilityModal />
-          <ToastContainer />
-        </div>
-      </div>
+      <AppInner />
     </WorkspaceProvider>
   );
 }
