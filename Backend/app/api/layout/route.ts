@@ -215,13 +215,11 @@ export async function POST(req: NextRequest) {
       } else if (intent.domain === 'analytics') {
         const { data } = await supabase
           .from('usage_daily')
-          .select('date, metric_name, value, segment')
+          .select('date, active_users, events, segment')
           .order('date', { ascending: false })
           .limit(10);
 
-        contextData = {
-          usage: data ?? [],
-        };
+        contextData = { usage: data ?? [] };
 
         if (data && data.length > 0) {
           contextFacts = 'Recent usage data from database:\n' + JSON.stringify(data, null, 2);
