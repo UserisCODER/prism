@@ -21,6 +21,12 @@ import { ProjectHealthPanel } from './ProjectHealthPanel';
 import { ContactCardPanel } from './ContactCardPanel';
 import { MeetingBriefPanel } from './MeetingBriefPanel';
 import { SuggestedActionsPanel } from './SuggestedActionsPanel';
+import { PrListPanel } from './PrListPanel';
+import { FailingTestsPanel } from './FailingTestsPanel';
+import { DeployStatusPanel } from './DeployStatusPanel';
+import { IssueTrackerPanel } from './IssueTrackerPanel';
+import { NotionPagesPanel } from './NotionPagesPanel';
+import { NotionTasksPanel } from './NotionTasksPanel';
 
 const COMPONENT_MAP: Record<string, React.FC<any>> = {
   client_overview: ClientOverviewPanel,
@@ -42,6 +48,14 @@ const COMPONENT_MAP: Record<string, React.FC<any>> = {
   contact_card: ContactCardPanel,
   autonomous_log: AutonomousLogPanel,
   suggested_actions: SuggestedActionsPanel,
+  pr_list: PrListPanel,
+  failing_tests: FailingTestsPanel,
+  deploy_status: DeployStatusPanel,
+  issue_tracker: IssueTrackerPanel,
+  code_suggestions: SuggestedActionsPanel,
+  notion_pages: NotionPagesPanel,
+  notion_tasks: NotionTasksPanel,
+  notion_activity: NotionPagesPanel,
 };
 
 const UnknownPanel: React.FC<{ componentId: string }> = ({ componentId }) => (
