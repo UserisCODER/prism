@@ -292,10 +292,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
           throw new Error('The backend returned no workspaces.');
         }
 
-        const selectedWorkspace =
-          workspaces.find((workspace) =>
-            `${workspace.slug ?? ''} ${workspace.domain ?? ''} ${workspace.name}`.toLowerCase().match(/sales|crm/)
-          ) ?? workspaces[0];
+        const selectedWorkspace = workspaces[0];
         const bundle = await fetchTaskadeWorkspace(selectedWorkspace.id);
 
         if (!cancelled) {

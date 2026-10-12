@@ -71,8 +71,8 @@ export const seededContacts: ContactData[] = [
 export const seededTasks: TaskData[] = [
   {
     id: 't-101',
-    title: 'Acme Corp Enterprise Contract Renewal ($120k ARR)',
-    project: 'Acme Corp Enterprise Renewal',
+    title: 'Acme Corp Contract Renewal ($120k ARR)',
+    project: 'Acme Corp Contract Renewal',
     client: 'Acme Corp',
     assignee: 'Sarah Lin',
     dueDate: 'In 3 days',
@@ -81,8 +81,8 @@ export const seededTasks: TaskData[] = [
   },
   {
     id: 't-102',
-    title: 'Prepare Acme Corp 10:00 AM Meeting Brief',
-    project: 'Acme Corp Enterprise Renewal',
+    title: 'Prepare Acme Corp Meeting Brief',
+    project: 'Acme Corp Contract Renewal',
     client: 'Acme Corp',
     assignee: 'Sarah Lin',
     dueDate: 'Tomorrow 9:30 AM',
@@ -91,8 +91,8 @@ export const seededTasks: TaskData[] = [
   },
   {
     id: 't-103',
-    title: 'Update API Documentation for Client SDK',
-    project: 'Sprint 24 Delivery',
+    title: 'Update API Documentation',
+    project: 'Team Sprint & Tasks',
     client: 'Acme Corp',
     assignee: 'Alex Rivera',
     dueDate: '2 days ago',
@@ -102,7 +102,7 @@ export const seededTasks: TaskData[] = [
   {
     id: 't-104',
     title: 'Review Security Audit Checklist',
-    project: 'Sprint 24 Delivery',
+    project: 'Team Sprint & Tasks',
     client: 'Acme Corp',
     assignee: 'Sarah Lin',
     dueDate: '1 day ago',
@@ -112,7 +112,7 @@ export const seededTasks: TaskData[] = [
   {
     id: 't-105',
     title: 'Finalize Mobile Release Notes',
-    project: 'Sprint 24 Delivery',
+    project: 'Team Sprint & Tasks',
     client: 'Acme Corp',
     assignee: 'David Chen',
     dueDate: '3 days ago',
@@ -121,8 +121,8 @@ export const seededTasks: TaskData[] = [
   },
   {
     id: 't-106',
-    title: 'Send Revised Contract Addendum to Marcus Vance',
-    project: 'Acme Corp Enterprise Renewal',
+    title: 'Send Contract Addendum to Marcus Vance',
+    project: 'Acme Corp Contract Renewal',
     client: 'Acme Corp',
     assignee: 'Sarah Lin',
     dueDate: 'Tomorrow 2:00 PM',
@@ -131,7 +131,7 @@ export const seededTasks: TaskData[] = [
   },
   {
     id: 't-107',
-    title: 'Investigate European Region Login Drop (15.2%)',
+    title: 'Investigate Login Drop Anomaly (15%)',
     project: 'European Gateway Stability',
     client: 'Acme Corp',
     assignee: 'Alex Rivera',
@@ -141,7 +141,7 @@ export const seededTasks: TaskData[] = [
   },
   {
     id: 't-108',
-    title: 'Verify European Gateway Connection Pool Latency',
+    title: 'Verify Gateway Connection Latency',
     project: 'European Gateway Stability',
     client: 'Acme Corp',
     assignee: 'Alex Rivera',
@@ -154,7 +154,7 @@ export const seededTasks: TaskData[] = [
 export const seededProjects: ProjectData[] = [
   {
     id: 'p-sprint-24',
-    name: 'Sprint 24 Delivery',
+    name: 'Team Sprint & Tasks',
     client: 'Acme Corp',
     health: 'at_risk',
     overdueCount: 3,
@@ -162,7 +162,7 @@ export const seededProjects: ProjectData[] = [
   },
   {
     id: 'p-renewal',
-    name: 'Acme Corp Enterprise Renewal',
+    name: 'Acme Corp Contract Renewal',
     client: 'Acme Corp',
     health: 'healthy',
     overdueCount: 0,
@@ -202,7 +202,7 @@ export const seededMeetings: MeetingData[] = [
   {
     id: 'm-2',
     client: 'Acme Corp',
-    title: 'Sprint 24 Backlog & Workload Rebalancing',
+    title: 'Sprint Backlog & Workload Rebalancing',
     heldAt: 'Yesterday at 3:00 PM',
     summary: 'Reviewed 3 overdue sprint deliverables. Identified Sarah Lin workload bottleneck and reallocated API documentation to Alex Rivera.',
     actionItems: [

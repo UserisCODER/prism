@@ -110,19 +110,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const DEFAULT_STARTER_WORKSPACES: TaskadeWorkspaceRecord[] = [
   {
     id: 'ws-1',
+    name: 'Team Workspace',
+    domain: 'team.prism.io',
+    slug: 'team-workspace',
+    description: 'Core team tasks, sprint deliverables, and project tracking.',
+    icon: 'layout',
+  },
+  {
+    id: 'ws-2',
     name: 'Acme Corp Account',
     domain: 'acmecorp.com',
     slug: 'acme-corp',
     description: 'Executive client sync, $120k ARR renewal proposal, and 50-seat expansion.',
     icon: 'briefcase',
-  },
-  {
-    id: 'ws-2',
-    name: 'Sprint 24 & Delivery',
-    domain: 'github.com',
-    slug: 'sprint-24',
-    description: 'Sprint deliverable tracking, blocker unblocking, and workload distribution.',
-    icon: 'terminal',
   },
   {
     id: 'ws-3',
@@ -207,14 +207,14 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
   {
     id: 'proj-1',
     workspace_id: 'default',
-    name: 'Active Opportunities & Pipeline',
+    name: 'Team Sprint & Tasks',
     default_view: 'board',
     nodes: [
       {
         id: 'node-1',
         project_id: 'proj-1',
-        title: 'Acme Corp Enterprise Contract Renewal ($120k ARR)',
-        content: 'Annual renewal scheduled for next month. 150 active seats with request for 50 additional seats.',
+        title: 'Acme Corp Contract Renewal ($120k ARR)',
+        content: 'Annual contract renewal and 50-seat expansion discussion.',
         status: 'in_progress',
         priority: 'critical',
         order_index: 0,
@@ -225,8 +225,8 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
       {
         id: 'node-2',
         project_id: 'proj-1',
-        title: 'Prepare Acme Corp 10:00 AM Meeting Brief',
-        content: 'Compile 99.9% uptime metrics, usage breakdown, and custom expansion terms.',
+        title: 'Prepare Acme Corp Meeting Brief',
+        content: '10:00 AM executive sync brief with 99.9% uptime SLA summary.',
         status: 'in_progress',
         priority: 'critical',
         order_index: 1,
@@ -237,8 +237,8 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
       {
         id: 'node-3',
         project_id: 'proj-1',
-        title: 'Update API Documentation for Client SDK',
-        content: 'Sprint 24 deliverable overdue. Reassigning to Alex Rivera to balance workload.',
+        title: 'Update API Documentation',
+        content: 'Overdue deliverable. Technical SDK guides for client integration.',
         status: 'todo',
         priority: 'high',
         order_index: 2,
@@ -250,7 +250,7 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
         id: 'node-4',
         project_id: 'proj-1',
         title: 'Review Security Audit Checklist',
-        content: 'Sprint 24 deliverable blocked pending legal review of compliance clause 4.2.',
+        content: 'Blocked by legal review of compliance clause 4.2.',
         status: 'review',
         priority: 'high',
         order_index: 3,
@@ -262,7 +262,7 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
         id: 'node-5',
         project_id: 'proj-1',
         title: 'Finalize Mobile Release Notes',
-        content: 'Sprint 24 deliverable overdue. Drafted and waiting on final sign-off before submission.',
+        content: 'Overdue deliverable. Changelog summary for mobile v2.4.',
         status: 'todo',
         priority: 'medium',
         order_index: 4,
@@ -273,8 +273,8 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
       {
         id: 'node-6',
         project_id: 'proj-1',
-        title: 'Send Revised Contract Addendum to Marcus Vance',
-        content: 'Include 50 additional user licenses and tiered volume pricing terms.',
+        title: 'Send Contract Addendum to Marcus Vance',
+        content: 'Pricing addendum with tiered volume discount terms.',
         status: 'in_progress',
         priority: 'high',
         order_index: 5,
@@ -285,8 +285,8 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
       {
         id: 'node-7',
         project_id: 'proj-1',
-        title: 'Investigate European Region Login Drop (15.2%)',
-        content: 'Telemetry identified Tuesday 2:00 PM gateway timeout. Connection pool patch deployed at 4:30 PM.',
+        title: 'Investigate Login Drop Anomaly (15%)',
+        content: 'Resolved. Tuesday European timeout caused by gateway connection pool saturation.',
         status: 'done',
         priority: 'critical',
         order_index: 6,
@@ -297,8 +297,8 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
       {
         id: 'node-8',
         project_id: 'proj-1',
-        title: 'Verify European Gateway Connection Pool Latency',
-        content: 'Confirm EU-West cluster connection pool limits and monitor latency below 85ms.',
+        title: 'Verify Gateway Connection Latency',
+        content: 'Monitoring regional connection pool below 85ms latency threshold.',
         status: 'in_progress',
         priority: 'high',
         order_index: 7,
@@ -311,13 +311,13 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
   {
     id: 'proj-2',
     workspace_id: 'default',
-    name: 'Client Meeting & Renewal War Room',
+    name: 'Client Meeting War Room',
     default_view: 'board',
     nodes: [
       {
         id: 'node-201',
         project_id: 'proj-2',
-        title: 'Review Acme Corp 10:00 AM Executive Agenda',
+        title: 'Review Acme Corp Executive Agenda',
         content: 'Agenda items: $120k ARR renewal, 50-seat expansion, and 99.9% uptime SLA summary.',
         status: 'in_progress',
         priority: 'critical',
@@ -433,15 +433,10 @@ export async function fetchTaskadeWorkspace(
     console.warn(`[taskadeApi] Could not fetch workspace ${workspaceId}, using starter bundle:`, err);
   }
 
+  const matchedWs = DEFAULT_STARTER_WORKSPACES.find((w) => w.id === workspaceId) ?? DEFAULT_STARTER_WORKSPACES[0];
+
   return {
-    workspace: {
-      id: workspaceId,
-      name: 'Salesforce CRM',
-      domain: 'salesforce.com',
-      slug: 'salesforce-crm',
-      description: 'Pipeline management and automated AI lead follow-ups.',
-      icon: 'sparkles',
-    },
+    workspace: matchedWs,
     projects: DEFAULT_STARTER_PROJECTS.map((p) => ({ ...p, workspace_id: workspaceId })),
     agents: DEFAULT_STARTER_AGENTS.map((a) => ({ ...a, workspace_id: workspaceId })),
     workflows: DEFAULT_STARTER_WORKFLOWS.map((w) => ({ ...w, workspace_id: workspaceId })),
