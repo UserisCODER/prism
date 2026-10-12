@@ -51,6 +51,26 @@ export const seededClients: ClientData[] = [
     sentiment: 'Positive',
     notes: 'Preparing Black Friday scalability test suite. Requested connection pool latency benchmarks.',
   },
+  {
+    id: 'c-strata',
+    name: 'Strata Cloud',
+    industry: 'Cloud Infrastructure',
+    healthScore: 95,
+    arr: '$110K',
+    owner: 'Alex Rivera',
+    sentiment: 'Positive - Expansion',
+    notes: 'Successfully validated multi-region failover cluster. Planning additional compute capacity deployment in Q4.',
+  },
+  {
+    id: 'c-summit',
+    name: 'Summit Financial',
+    industry: 'Banking Technology',
+    healthScore: 92,
+    arr: '$135K',
+    owner: 'Sarah Lin',
+    sentiment: 'Positive - Renewal Confirmed',
+    notes: 'Board approved tiered volume discounts for annual license renewal. Meeting scheduled for Friday.',
+  },
 ];
 
 export const seededContacts: ContactData[] = [
@@ -101,6 +121,22 @@ export const seededContacts: ContactData[] = [
     email: 'l.oconnor@beaconmedia.com',
     lastContact: '4 days ago',
     sentiment: 'neutral',
+  },
+  {
+    id: 'ct-7',
+    name: 'James Thorne',
+    role: 'VP Infrastructure',
+    email: 'j.thorne@stratacloud.io',
+    lastContact: 'Yesterday at 4:30 PM',
+    sentiment: 'positive',
+  },
+  {
+    id: 'ct-8',
+    name: 'Chloe Vance',
+    role: 'VP Finance',
+    email: 'c.vance@summitfin.com',
+    lastContact: 'Today at 8:45 AM',
+    sentiment: 'positive',
   },
 ];
 
@@ -205,6 +241,46 @@ export const seededTasks: TaskData[] = [
     priority: 'high',
     client: 'Acme Corp',
   },
+  {
+    id: 't-111',
+    title: 'Configure Multi-Region Backup Replication',
+    project: 'Cloud Infrastructure',
+    assignee: 'Alex Rivera',
+    dueDate: 'In 2 days',
+    status: 'in_progress',
+    priority: 'medium',
+    client: 'Strata Cloud',
+  },
+  {
+    id: 't-112',
+    title: 'Review Q4 Capacity Forecast for Black Friday',
+    project: 'Enterprise Renewals',
+    assignee: 'Sarah Lin',
+    dueDate: 'In 3 days',
+    status: 'in_progress',
+    priority: 'high',
+    client: 'Orion Retail Systems',
+  },
+  {
+    id: 't-113',
+    title: 'Automate Customer SLA Breach Webhook Dispatch',
+    project: 'Gateway Reliability',
+    assignee: 'Alex Rivera',
+    dueDate: 'Today 6:00 PM',
+    status: 'in_progress',
+    priority: 'high',
+    client: 'Summit Financial',
+  },
+  {
+    id: 't-114',
+    title: 'Publish API SDK Migration Guide v2.5',
+    project: 'Sprint 24 Delivery',
+    assignee: 'David Chen',
+    dueDate: 'In 4 days',
+    status: 'in_progress',
+    priority: 'medium',
+    client: 'Nexus Logistics',
+  },
 ];
 
 export const seededProjects: ProjectData[] = [
@@ -239,6 +315,22 @@ export const seededProjects: ProjectData[] = [
     health: 'healthy',
     overdueCount: 0,
     completionPct: 88,
+  },
+  {
+    id: 'p-cloud-infra',
+    name: 'Cloud Infrastructure Migration',
+    client: 'Strata Cloud',
+    health: 'healthy',
+    overdueCount: 0,
+    completionPct: 82,
+  },
+  {
+    id: 'p-billing',
+    name: 'Billing & Invoicing Automation',
+    client: 'Summit Financial',
+    health: 'healthy',
+    overdueCount: 0,
+    completionPct: 95,
   },
 ];
 
@@ -287,6 +379,30 @@ export const seededMeetings: MeetingData[] = [
       'Archive incident log #104'
     ],
   },
+  {
+    id: 'm-4',
+    client: 'Strata Cloud',
+    title: 'Strata Cloud Q4 Infrastructure Sync',
+    heldAt: 'Thursday at 11:00 AM',
+    summary: 'Review multi-region backup replication benchmarks and verify zero-downtime failover procedures.',
+    actionItems: [
+      'Finalize Q4 compute capacity reservation',
+      'Review automated failover test run logs',
+      'Send cluster health report to James Thorne'
+    ],
+  },
+  {
+    id: 'm-5',
+    client: 'Summit Financial',
+    title: 'Summit Financial Annual License Review',
+    heldAt: 'Friday at 2:00 PM',
+    summary: 'Review $135k ARR license agreement, verify volume discount thresholds, and execute renewal addendum.',
+    actionItems: [
+      'Confirm invoice schedule with Chloe Vance',
+      'Send executed contract to legal archive',
+      'Schedule quarterly executive check-in'
+    ],
+  },
 ];
 
 export const seededCommunications: CommunicationData[] = [
@@ -327,5 +443,21 @@ export const seededCommunications: CommunicationData[] = [
     channel: 'call',
     timestamp: '2 days ago',
     snippet: 'Confirmed Vertex Health monthly report is ready for delivery. Telemetry metrics show 100% adherence to SLA requirements.',
+  },
+  {
+    id: 'comm-6',
+    sender: 'James Thorne (VP Infrastructure)',
+    channel: 'slack',
+    timestamp: 'Yesterday at 4:30 PM',
+    snippet: 'Multi-region failover dry run passed with 0 packet drops. Ready for tomorrow’s infrastructure review.',
+    urgencyTag: 'Infrastructure Ready',
+  },
+  {
+    id: 'comm-7',
+    sender: 'Chloe Vance (VP Finance)',
+    channel: 'email',
+    timestamp: 'Today at 8:45 AM',
+    snippet: 'Invoice schedule and volume tier discounts approved by the board for Summit Financial ($135k ARR).',
+    urgencyTag: 'Renewal Approved',
   },
 ];
