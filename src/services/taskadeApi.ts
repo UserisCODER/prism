@@ -107,24 +107,52 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+const DEFAULT_STARTER_WORKSPACES: TaskadeWorkspaceRecord[] = [
+  {
+    id: 'ws-1',
+    name: 'Salesforce CRM',
+    domain: 'salesforce.com',
+    slug: 'salesforce-crm',
+    description: 'Enterprise pipeline management, client health scores, and automated lead follow-ups.',
+    icon: 'sparkles',
+  },
+  {
+    id: 'ws-2',
+    name: 'Meridian Labs',
+    domain: 'meridianlabs.io',
+    slug: 'meridian-labs',
+    description: 'Client meeting preparation, $1.42M ARR renewal, and SLA contract negotiation.',
+    icon: 'briefcase',
+  },
+  {
+    id: 'ws-3',
+    name: 'Engineering Infrastructure',
+    domain: 'github.com',
+    slug: 'eng-infra',
+    description: 'Telemetry monitoring, Gateway #491 incident diagnostics, and delivery velocity.',
+    icon: 'terminal',
+  },
+];
+
 export async function fetchTaskadeWorkspaces(): Promise<TaskadeWorkspaceRecord[]> {
-  const payload = await request<{ workspaces?: unknown }>('/workspaces');
-  if (!Array.isArray(payload.workspaces)) {
-    throw new Error('Workspace API returned an invalid workspace list');
+  try {
+    const payload = await request<{ workspaces?: unknown }>('/workspaces');
+    if (Array.isArray(payload.workspaces)) {
+      const workspaces = payload.workspaces.filter(
+        (workspace): workspace is TaskadeWorkspaceRecord =>
+          isRecord(workspace) &&
+          typeof workspace.id === 'string' &&
+          typeof workspace.name === 'string'
+      );
+      if (workspaces.length > 0) {
+        return workspaces;
+      }
+    }
+  } catch (err) {
+    console.warn('[taskadeApi] Remote workspaces unavailable, using demo starter workspaces:', err);
   }
 
-  const workspaces = payload.workspaces.filter(
-    (workspace): workspace is TaskadeWorkspaceRecord =>
-      isRecord(workspace) &&
-      typeof workspace.id === 'string' &&
-      typeof workspace.name === 'string'
-  );
-
-  if (workspaces.length !== payload.workspaces.length) {
-    throw new Error('Workspace API returned one or more invalid workspace records');
-  }
-
-  return workspaces;
+  return DEFAULT_STARTER_WORKSPACES;
 }
 
 const DEFAULT_STARTER_AGENTS: TaskadeAgentRecord[] = [
@@ -154,6 +182,24 @@ const DEFAULT_STARTER_AGENTS: TaskadeAgentRecord[] = [
     system_prompt: 'Monitor client satisfaction, track SLAs, and flag high-risk anomalies.',
     model_tier: 'FAST',
     tools_assigned: ['Anomaly detection', 'Slack alerts'],
+  },
+  {
+    id: 'agent-4',
+    workspace_id: 'default',
+    name: 'Client Success Strategist',
+    persona: 'Enterprise Relationship & Churn Analyst',
+    system_prompt: 'Synthesizes stakeholder sentiment, renewal schedules, and executive talking points.',
+    model_tier: 'REASONING',
+    tools_assigned: ['Sentiment analysis', 'Meeting prep', 'CRM sync'],
+  },
+  {
+    id: 'agent-5',
+    workspace_id: 'default',
+    name: 'Incident Diagnostic Co-Pilot',
+    persona: 'Real-Time Telemetry & Anomaly Investigator',
+    system_prompt: 'Correlates API traffic anomalies, Gateway deployment errors, and latency telemetry.',
+    model_tier: 'FAST',
+    tools_assigned: ['Spline telemetry', 'Gateway diagnostics', 'Rollback trigger'],
   },
 ];
 
@@ -224,6 +270,158 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
         tags: ['Legal'],
         due_date: new Date(Date.now() + 86400000 * 2).toISOString(),
       },
+      {
+        id: 'node-6',
+        project_id: 'proj-1',
+        title: 'Prepare Q3 Executive Review Slide Deck',
+        content: 'Incorporate Meridian Labs $1.42M ARR renewal terms, SLA uptimes, and Q4 roadmap.',
+        status: 'in_progress',
+        priority: 'high',
+        order_index: 5,
+        assignee: 'Sarah Lin',
+        tags: ['Executive', 'Deck', 'Q3'],
+        due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
+      },
+      {
+        id: 'node-7',
+        project_id: 'proj-1',
+        title: 'Investigate SMB API Latency Spike on Node #491',
+        content: 'Anomaly detector flagged -34% SMB usage drop correlated with Gateway release #491.',
+        status: 'in_progress',
+        priority: 'critical',
+        order_index: 6,
+        assignee: 'Alex Rivera',
+        tags: ['Telemetry', 'SRE', 'Incident'],
+        due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
+      },
+      {
+        id: 'node-8',
+        project_id: 'proj-1',
+        title: 'Audit SOC2 Compliance Clause 4.2 with Legal',
+        content: 'Sarah Jenkins requested legal signoff for dedicated multi-region failover cluster.',
+        status: 'review',
+        priority: 'medium',
+        order_index: 7,
+        assignee: 'David Chen',
+        tags: ['Compliance', 'Security'],
+        due_date: new Date(Date.now() + 86400000 * 4).toISOString(),
+      },
+      {
+        id: 'node-9',
+        project_id: 'proj-1',
+        title: 'Deploy Automated SLA Breach Webhook to Ops Slack',
+        content: 'Dispatches real-time alerts when SMB API drop crosses 20% threshold.',
+        status: 'done',
+        priority: 'high',
+        order_index: 8,
+        assignee: 'Alex Rivera',
+        tags: ['Automation', 'DevOps'],
+        due_date: new Date(Date.now() - 86400000 * 1).toISOString(),
+      },
+      {
+        id: 'node-10',
+        project_id: 'proj-1',
+        title: 'Unblock Priya Sharma: Reassign Batch Run #491',
+        content: 'Priya Sharma is 140% overloaded across 6 critical path items risking Q3 milestone SLA.',
+        status: 'todo',
+        priority: 'critical',
+        order_index: 9,
+        assignee: 'Marcus Vance',
+        tags: ['Bottleneck', 'Q3 Milestone'],
+        due_date: new Date(Date.now() + 86400000 * 2).toISOString(),
+      },
+      {
+        id: 'node-11',
+        project_id: 'proj-1',
+        title: 'Sync with Elena Rostova on Microservice Migration',
+        content: 'Lead architect praise for 99.98% uptime; confirm final production rollout date.',
+        status: 'todo',
+        priority: 'medium',
+        order_index: 10,
+        assignee: 'Sarah Lin',
+        tags: ['Architecture', 'TechDebt'],
+        due_date: new Date(Date.now() + 86400000 * 6).toISOString(),
+      },
+      {
+        id: 'node-12',
+        project_id: 'proj-1',
+        title: 'Verify Q3 Revenue Forecast ($1.42M ARR Renewal)',
+        content: 'Finance confirmation of margin targets with tiered volume pricing structure.',
+        status: 'done',
+        priority: 'high',
+        order_index: 11,
+        assignee: 'Marcus Vance',
+        tags: ['Finance', 'Renewal'],
+        due_date: new Date(Date.now() - 86400000 * 3).toISOString(),
+      },
+    ],
+  },
+  {
+    id: 'proj-2',
+    workspace_id: 'default',
+    name: 'Client Meeting & Renewal War Room',
+    default_view: 'adaptive',
+    nodes: [
+      {
+        id: 'node-201',
+        project_id: 'proj-2',
+        title: 'Review Meridian Labs 11:30 AM Executive Agenda',
+        content: 'Agenda items: Q3 contract amendment, clause 4.2 compliance wording, and tier-4 SLA pricing.',
+        status: 'in_progress',
+        priority: 'critical',
+        order_index: 0,
+        assignee: 'Sarah Lin',
+        tags: ['Executive', 'Meeting', 'Meridian'],
+        due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
+      },
+      {
+        id: 'node-202',
+        project_id: 'proj-2',
+        title: 'Address Marcus Vance Budget Pushback on SLA Tier',
+        content: 'Marcus indicated budget approval for Q4 expansion if pricing accommodates the 34% volume jump.',
+        status: 'todo',
+        priority: 'high',
+        order_index: 1,
+        assignee: 'Marcus Vance',
+        tags: ['Budget', 'Finance'],
+        due_date: new Date(Date.now() + 86400000 * 2).toISOString(),
+      },
+      {
+        id: 'node-203',
+        project_id: 'proj-2',
+        title: 'Prepare Elena Rostova Speed & Architecture Brief',
+        content: 'Document latency benchmarks and failover architecture to validate 99.98% SLA capability.',
+        status: 'review',
+        priority: 'medium',
+        order_index: 2,
+        assignee: 'Alex Rivera',
+        tags: ['Architecture', 'Technical'],
+        due_date: new Date(Date.now() + 86400000 * 2).toISOString(),
+      },
+      {
+        id: 'node-204',
+        project_id: 'proj-2',
+        title: 'Finalize Custom SLA Pricing Addendum ($1.42M ARR)',
+        content: 'Legal and financial addendum ready for 1-click execution following tomorrow morning sync.',
+        status: 'in_progress',
+        priority: 'critical',
+        order_index: 3,
+        assignee: 'Sarah Lin',
+        tags: ['Legal', 'High-ARR'],
+        due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
+      },
+      {
+        id: 'node-205',
+        project_id: 'proj-2',
+        title: 'Verify Token Throughput Spike (+34% usage metrics)',
+        content: 'Confirmed active telemetry logs showing sustained token demand across all 480 production pods.',
+        status: 'done',
+        priority: 'high',
+        order_index: 4,
+        assignee: 'David Chen',
+        tags: ['Telemetry', 'Verified'],
+        due_date: new Date(Date.now() - 86400000 * 1).toISOString(),
+      },
     ],
   },
 ];
@@ -239,6 +437,40 @@ const DEFAULT_STARTER_WORKFLOWS: TaskadeWorkflowRecord[] = [
       { id: '1', type: 'trigger', label: 'Item Marked Critical' },
       { id: '2', type: 'action', label: 'AI Summarize Context', action: 'ai_summary' },
       { id: '3', type: 'action', label: 'Notify Lead via Webhook', action: 'webhook' },
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2' },
+      { id: 'e2-3', source: '2', target: '3' },
+    ],
+    is_active: true,
+  },
+  {
+    id: 'wf-2',
+    workspace_id: 'default',
+    name: 'Telemetry Anomaly Auto-Triage',
+    description: 'Triggers when product usage anomalies exceed 20% to generate incident summary and notify on-call SRE.',
+    trigger_type: 'webhook',
+    nodes: [
+      { id: '1', type: 'trigger', label: 'Usage Drop > 20% Detected' },
+      { id: '2', type: 'action', label: 'Trace Gateway Node #491 Logs', action: 'diagnostic_trace' },
+      { id: '3', type: 'action', label: 'Dispatch SRE Slack Incident Alert', action: 'webhook' },
+    ],
+    edges: [
+      { id: 'e1-2', source: '1', target: '2' },
+      { id: 'e2-3', source: '2', target: '3' },
+    ],
+    is_active: true,
+  },
+  {
+    id: 'wf-3',
+    workspace_id: 'default',
+    name: 'Executive Meeting Brief Generator',
+    description: 'Compiles client ARR, stakeholder sentiment, and open tickets 24 hours before scheduled executive review.',
+    trigger_type: 'schedule',
+    nodes: [
+      { id: '1', type: 'trigger', label: 'Calendar Sync (24h Before 11:30 AM)' },
+      { id: '2', type: 'action', label: 'Synthesize Stakeholder Sentiment', action: 'ai_summary' },
+      { id: '3', type: 'action', label: 'Publish Talking Points to Adaptive Deck', action: 'deck_publish' },
     ],
     edges: [
       { id: 'e1-2', source: '1', target: '2' },
