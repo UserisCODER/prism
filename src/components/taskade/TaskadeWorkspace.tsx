@@ -1122,55 +1122,6 @@ const AppsSection: React.FC<AppsSectionProps> = ({
         <button type="button" className="td-more-button" aria-label="Project options"><MoreHorizontal size={18} /></button>
       </div>
 
-      {/* Hackathon Intent Adaptation Bar */}
-      <div className="td-hackathon-quick-banner">
-        <span className="td-quick-banner-label">
-          <Sparkles size={13} /> Adaptive Intent:
-        </span>
-        <div className="td-quick-scenarios">
-          <button
-            type="button"
-            className={`td-quick-sc-btn ${view === 'adaptive' && activeScenario === 'meeting_prep' ? 'is-active' : ''}`}
-            onClick={() => {
-              onSelectScenario('meeting_prep');
-              onViewChange('adaptive');
-            }}
-          >
-            <span>Client Meeting</span>
-          </button>
-          <button
-            type="button"
-            className={`td-quick-sc-btn ${view === 'adaptive' && activeScenario === 'usage_drop' ? 'is-active' : ''}`}
-            onClick={() => {
-              onSelectScenario('usage_drop');
-              onViewChange('adaptive');
-            }}
-          >
-            <span>Usage Drop</span>
-          </button>
-          <button
-            type="button"
-            className={`td-quick-sc-btn ${view === 'adaptive' && activeScenario === 'overdue_work' ? 'is-active' : ''}`}
-            onClick={() => {
-              onSelectScenario('overdue_work');
-              onViewChange('adaptive');
-            }}
-          >
-            <span>Overdue Work</span>
-          </button>
-          <button
-            type="button"
-            className={`td-quick-sc-btn ${view === 'adaptive' && activeScenario === 'generic' ? 'is-active' : ''}`}
-            onClick={() => {
-              onSelectScenario('generic');
-              onViewChange('adaptive');
-            }}
-          >
-            <span>Dashboard Baseline</span>
-          </button>
-        </div>
-      </div>
-
       <div className="td-view-toolbar">
         <div className="td-view-switcher" role="tablist" aria-label="Project view">
           {viewOptions.map(({ id, label, icon: Icon }) => (
