@@ -409,11 +409,20 @@ export interface AgentActionPayload {
   createdTask?: TaskadeNodeRecord;
 }
 
+export interface AgentActionOption {
+  id: string;
+  label: string;
+  icon?: 'calendar' | 'table' | 'board' | 'mindmap' | 'check' | 'zap' | 'user' | 'filter' | 'plus' | 'inspect' | 'workflow';
+  action: AgentActionPayload;
+  applied?: boolean;
+}
+
 export interface SendAgentMessageResult {
   reply: string;
   agent: { id?: string; name: string; persona: string };
   createdTasks: TaskadeNodeRecord[];
   actions?: AgentActionPayload[];
+  options?: AgentActionOption[];
 }
 
 export async function sendTaskadeAgentMessage(input: {
@@ -644,17 +653,47 @@ export async function sendTaskadeAgentMessage(input: {
     }
   }
 
-  // Delete Task
-  if (lower.startsWith('delete ') || lower.startsWith('remove ') || lower.includes('delete task') || lower.includes('remove task')) {
-    const targetNode = openedNode || findMatchingNode(lower);
-    if (targetNode) {
-      actions.push({
-        type: 'delete_task',
-        taskId: targetNode.id,
-        taskTitle: targetNode.title,
-        label: `Deleted "${targetNode.title}"`,
-      });
+  // Filter Tasks
+  if (lower.includes('filter ') || lower.includes('show only ') || lower.includes('only critical') || lower.startsWith('filter') || (lower.includes('search ') && !lower.includes('search for node'))) {
+    let filterQuery = '';
+    if (lower.includes('critical')) filterQuery = 'critical';
+    else if (lower.includes('high')) filterQuery = 'high';
+    else if (lower.includes('in progress') || lower.includes('in_progress')) filterQuery = 'in progress';
+    else if (lower.includes('done') || lower.includes('complete')) filterQuery = 'done';
+    else if (lower.includes('todo')) filterQuery = 'todo';
+    else {
+      const match = lower.match(/(?:filter|search|find)\s+(?:by\s+|for\s+)?([\w\s]+)/i);
+      if (match) filterQuery = match[1].trim();
     }
+    actions.push({
+      type: 'filter_tasks',
+      target: filterQuery,
+      label: filterQuery ? `Filtered workspace for "${filterQuery}"` : 'Cleared filter',
+    });
+  } else if (lower.includes('clear filter') || lower.includes('show all') || lower.includes('reset search') || lower.includes('unfilter') || lower === 'all') {
+    actions.push({
+      type: 'filter_tasks',
+      target: '',
+      label: 'Cleared table filter',
+    });
+  }
+
+  // Workspace Summary & Insights
+  if (
+    lower.includes('summarize') ||
+    lower.includes('summary') ||
+    lower.includes('overview') ||
+    (lower.includes('status') && !modifiedField && !lower.includes('set status') && !lower.includes('mark status')) ||
+    lower.includes('what tasks') ||
+    lower.includes('what to do next') ||
+    lower.includes('how is the project')
+  ) {
+    const total = input.nodes.length;
+    const completed = input.nodes.filter((n) => n.status === 'done').length;
+    const inProg = input.nodes.filter((n) => n.status === 'in_progress').length;
+    const critical = input.nodes.filter((n) => n.priority === 'critical');
+
+    reply = `### Workspace Health & Executive Summary\n* **Total Records**: ${total}\n* **In Progress**: ${inProg} item${inProg !== 1 ? 's' : ''}\n* **Completed**: ${completed} item${completed !== 1 ? 's' : ''}\n* **Critical Blockers**: ${critical.length} (${critical.map((c) => `"${c.title}"`).join(', ') || 'None'})\n\nSelect any real-time action below to update tasks or transition views in the background.`;
   }
 
   // Try Remote Chat API
@@ -664,6 +703,7 @@ export async function sendTaskadeAgentMessage(input: {
       agent?: unknown;
       createdTasks?: unknown;
       actions?: AgentActionPayload[];
+      options?: AgentActionOption[];
     }>('/agents/chat', {
       method: 'POST',
       body: JSON.stringify(input),
@@ -680,11 +720,20 @@ export async function sendTaskadeAgentMessage(input: {
         (act, idx, arr) => arr.findIndex((a) => a.type === act.type && a.target === act.target && a.taskId === act.taskId && a.field === act.field) === idx
       );
 
+      const generatedOptions = payload.options || buildContextualOptions({
+        nodes: input.nodes,
+        openedNode,
+        modifiedNode,
+        actions: uniqueActions,
+        query: lower,
+      });
+
       return {
         reply: payload.reply,
         agent: payload.agent as { id?: string; name: string; persona: string },
         createdTasks: payload.createdTasks as TaskadeNodeRecord[],
         actions: uniqueActions.length > 0 ? uniqueActions : undefined,
+        options: generatedOptions.length > 0 ? generatedOptions : undefined,
       };
     }
   } catch (err) {
@@ -703,19 +752,24 @@ export async function sendTaskadeAgentMessage(input: {
   let reply = '';
 
   if (openedNode && !modifiedNode && !isTaskCreateRequest) {
-    reply = `I've navigated to the **Table View** and opened **"${openedNode.title}"** in the Task Inspector.\n\n### Current Fields:\n* **Status**: \`${openedNode.status.toUpperCase()}\`\n* **Priority**: \`${openedNode.priority.toUpperCase()}\`\n* **Assignee**: ${openedNode.assignee || 'Unassigned'}\n* **Due Date**: ${openedNode.due_date || 'None'}\n${openedNode.content ? `* **Notes**: ${openedNode.content}` : ''}\n\nAll fields are unlocked for real-time manipulation. You can ask me to change priority, reassign, adjust status, or edit directly in the table cells.`;
+    reply = `Navigated to **Table View** and opened **"${openedNode.title}"** in the Task Inspector.\n\n* **Status**: \`${openedNode.status.toUpperCase()}\` • **Priority**: \`${openedNode.priority.toUpperCase()}\` • **Assignee**: ${openedNode.assignee || 'Unassigned'} • **Due**: ${openedNode.due_date || 'None'}\n\nAll fields are editable directly in the table or via the action buttons below.`;
   } else if (modifiedNode && modifiedField) {
     const valStr = typeof modifiedValue === 'string' ? modifiedValue.toUpperCase() : JSON.stringify(modifiedValue);
-    reply = `✅ **Data Field Manipulated**: Updated **${modifiedField.toUpperCase()}** to \`${valStr}\` on **"${modifiedNode.title}"**.\n\nThe project table and database have been updated in real time.`;
+    reply = `✅ Updated **${modifiedField.toUpperCase()}** to \`${valStr}\` on **"${modifiedNode.title}"**.\n\nThe project table and database have been updated in real time in the background.`;
+  } else if (actions.some((a) => a.type === 'filter_tasks')) {
+    const filterAct = actions.find((a) => a.type === 'filter_tasks');
+    reply = filterAct?.target
+      ? `Filtered workspace for **"${filterAct.target}"**. Matching tasks are shown in the background view.`
+      : `Filter cleared. All tasks are visible in the background workspace.`;
   } else if (actions.some((a) => a.type === 'delete_task')) {
     const delAct = actions.find((a) => a.type === 'delete_task');
-    reply = `🗑️ **Record Removed**: ${delAct?.label || 'Deleted task from project table'}.`;
+    reply = `🗑️ Removed: ${delAct?.label || 'Deleted task from project table'}.`;
   } else if (actions.length > 0) {
     const actionLabels = actions.map((a) => a.label).filter(Boolean);
     if (actions.some((a) => a.type === 'switch_view' && a.target === 'table')) {
-      reply = `Switched to **Table View**. All task records, statuses, priorities, assignees, and dates are laid out with direct editable field cells.`;
+      reply = `Switched to **Table View**. All records, assignees, and dates are displayed in editable table rows.`;
     } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'board')) {
-      reply = `Switched to **Board View** (Kanban). You can visually review the pipeline across Todo, In Progress, Review, and Done.`;
+      reply = `Switched to **Board View** (Kanban). Visual workflow pipeline across Todo, In Progress, Review, and Done.`;
     } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'mindmap')) {
       reply = `Switched to **Mind Map View**, displaying task nodes clustered by branch hierarchy.`;
     } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'calendar')) {
@@ -773,18 +827,21 @@ export async function sendTaskadeAgentMessage(input: {
       taskTitle: newTask.title,
       label: `Created task "${cleanTitle}"`,
     });
-    actions.push({
-      type: 'open_task',
-      taskId: newTask.id,
-      taskTitle: newTask.title,
-      label: `Opened "${cleanTitle}"`,
-    });
 
-    const taskMsg = `➕ **New Record Created**: Added **"${cleanTitle}"** to the project table with Priority **${newTask.priority.toUpperCase()}**, Assignee **${newTask.assignee}**, and Status **${newTask.status.toUpperCase()}**.`;
+    const taskMsg = `➕ **New Task Created**: Added **"${cleanTitle}"** with Priority **${newTask.priority.toUpperCase()}**, Assignee **${newTask.assignee}**, and Status **${newTask.status.toUpperCase()}**.`;
     reply = reply ? `${reply}\n\n${taskMsg}` : taskMsg;
   } else if (!reply) {
-    reply = `I'm analyzing your active project table with **${input.nodes.length}** records. Give me a command like:\n• *"Open Acme Corp Enterprise Contract Renewal"*\n• *"Set priority to Critical"*\n• *"Assign to Sarah Lin"*\n• *"Create task 'Security Audit' with high priority"*\n• *"Switch to Table View"*`;
+    reply = `I'm analyzing your active project table with **${input.nodes.length}** records. Give me a command like:\n• *"Open Acme Corp Enterprise Contract Renewal"*\n• *"Set priority to Critical"*\n• *"Assign to Sarah Lin"*\n• *"Create task 'Security Audit' with high priority"*\n• *"Switch to Calendar View"*`;
   }
+
+  const generatedOptions = buildContextualOptions({
+    nodes: input.nodes,
+    openedNode,
+    modifiedNode,
+    createdTask: createdTasks[0],
+    actions,
+    query: lower,
+  });
 
   return {
     reply,
@@ -795,7 +852,315 @@ export async function sendTaskadeAgentMessage(input: {
     },
     createdTasks,
     actions: actions.length > 0 ? actions : undefined,
+    options: generatedOptions.length > 0 ? generatedOptions : undefined,
   };
+}
+
+function buildContextualOptions(params: {
+  nodes: TaskadeNodeRecord[];
+  openedNode?: TaskadeNodeRecord;
+  modifiedNode?: TaskadeNodeRecord;
+  createdTask?: TaskadeNodeRecord;
+  actions: AgentActionPayload[];
+  query: string;
+}): AgentActionOption[] {
+  const options: AgentActionOption[] = [];
+  const q = params.query.toLowerCase();
+  const activeNode = params.modifiedNode || params.openedNode || params.createdTask;
+
+  // 1. Task-specific options when an item was targeted or modified
+  if (activeNode) {
+    if (activeNode.status !== 'done') {
+      options.push({
+        id: `opt-done-${activeNode.id}-${Date.now()}`,
+        label: `Mark as Done: "${activeNode.title.slice(0, 24)}"`,
+        icon: 'check',
+        action: {
+          type: 'update_field',
+          taskId: activeNode.id,
+          taskTitle: activeNode.title,
+          field: 'status',
+          value: 'done',
+          label: `Marked "${activeNode.title}" Done`,
+        },
+      });
+    }
+
+    if (activeNode.status !== 'in_progress') {
+      options.push({
+        id: `opt-prog-${activeNode.id}-${Date.now()}`,
+        label: `Set In Progress`,
+        icon: 'zap',
+        action: {
+          type: 'update_field',
+          taskId: activeNode.id,
+          taskTitle: activeNode.title,
+          field: 'status',
+          value: 'in_progress',
+          label: `Marked "${activeNode.title}" In Progress`,
+        },
+      });
+    }
+
+    if (activeNode.priority !== 'critical') {
+      options.push({
+        id: `opt-crit-${activeNode.id}-${Date.now()}`,
+        label: `Escalate to Critical`,
+        icon: 'zap',
+        action: {
+          type: 'update_field',
+          taskId: activeNode.id,
+          taskTitle: activeNode.title,
+          field: 'priority',
+          value: 'critical',
+          label: `Set Priority to CRITICAL on "${activeNode.title}"`,
+        },
+      });
+    }
+
+    if (activeNode.assignee !== 'Sarah Lin') {
+      options.push({
+        id: `opt-assign-${activeNode.id}-${Date.now()}`,
+        label: `Assign to Sarah Lin`,
+        icon: 'user',
+        action: {
+          type: 'update_field',
+          taskId: activeNode.id,
+          taskTitle: activeNode.title,
+          field: 'assignee',
+          value: 'Sarah Lin',
+          label: `Assigned "${activeNode.title}" to Sarah Lin`,
+        },
+      });
+    }
+
+    options.push({
+      id: `opt-cal-${activeNode.id}-${Date.now()}`,
+      label: `Open in Calendar View`,
+      icon: 'calendar',
+      action: {
+        type: 'switch_view',
+        target: 'calendar',
+        label: `Switched to Calendar View`,
+      },
+    });
+
+    return options.slice(0, 4);
+  }
+
+  // 2. Query is about filtering or search
+  if (q.includes('filter') || q.includes('search') || q.includes('show only') || q.includes('find')) {
+    options.push({
+      id: `opt-clear-filter-${Date.now()}`,
+      label: 'Clear Filter (Show All)',
+      icon: 'filter',
+      action: {
+        type: 'filter_tasks',
+        target: '',
+        label: 'Cleared table filter',
+      },
+    });
+    options.push({
+      id: `opt-filter-crit-${Date.now()}`,
+      label: 'Filter: Critical Blockers',
+      icon: 'zap',
+      action: {
+        type: 'filter_tasks',
+        target: 'critical',
+        label: 'Filtered for Critical Blockers',
+      },
+    });
+    options.push({
+      id: `opt-filter-prog-${Date.now()}`,
+      label: 'Filter: In Progress',
+      icon: 'filter',
+      action: {
+        type: 'filter_tasks',
+        target: 'in progress',
+        label: 'Filtered for In Progress Tasks',
+      },
+    });
+    options.push({
+      id: `opt-filter-done-${Date.now()}`,
+      label: 'Filter: Completed Tasks',
+      icon: 'check',
+      action: {
+        type: 'filter_tasks',
+        target: 'done',
+        label: 'Filtered for Completed Tasks',
+      },
+    });
+    return options.slice(0, 4);
+  }
+
+  // 3. Query is about switching to Calendar
+  if (q.includes('calendar') || q.includes('schedule') || q.includes('timeline')) {
+    const criticalNode = params.nodes.find((n) => n.priority === 'critical');
+    options.push({
+      id: `opt-cal-table-${Date.now()}`,
+      label: 'Back to Table View',
+      icon: 'table',
+      action: {
+        type: 'switch_view',
+        target: 'table',
+        label: 'Switched to Table View',
+      },
+    });
+    options.push({
+      id: `opt-cal-board-${Date.now()}`,
+      label: 'Switch to Kanban Board',
+      icon: 'board',
+      action: {
+        type: 'switch_view',
+        target: 'board',
+        label: 'Switched to Board View',
+      },
+    });
+    if (criticalNode) {
+      options.push({
+        id: `opt-cal-crit-${criticalNode.id}-${Date.now()}`,
+        label: `Inspect: "${criticalNode.title.slice(0, 22)}"`,
+        icon: 'inspect',
+        action: {
+          type: 'open_task',
+          taskId: criticalNode.id,
+          taskTitle: criticalNode.title,
+          field: 'all',
+          label: `Opened "${criticalNode.title}"`,
+        },
+      });
+    }
+    options.push({
+      id: `opt-cal-filter-${Date.now()}`,
+      label: 'Filter: In Progress Tasks',
+      icon: 'filter',
+      action: {
+        type: 'filter_tasks',
+        target: 'in progress',
+        label: 'Filtered for In Progress Tasks',
+      },
+    });
+    return options.slice(0, 4);
+  }
+
+  // 4. Query is about Board or Mindmap
+  if (q.includes('board') || q.includes('kanban') || q.includes('mindmap') || q.includes('mind map')) {
+    options.push({
+      id: `opt-nav-cal-${Date.now()}`,
+      label: 'Open Calendar View',
+      icon: 'calendar',
+      action: {
+        type: 'switch_view',
+        target: 'calendar',
+        label: 'Switched to Calendar View',
+      },
+    });
+    options.push({
+      id: `opt-nav-tbl-${Date.now()}`,
+      label: 'Open Table View',
+      icon: 'table',
+      action: {
+        type: 'switch_view',
+        target: 'table',
+        label: 'Switched to Table View',
+      },
+    });
+    options.push({
+      id: `opt-nav-wf-${Date.now()}`,
+      label: 'Open Automations Studio',
+      icon: 'workflow',
+      action: {
+        type: 'switch_section',
+        target: 'workflows',
+        label: 'Opened Automation Studio',
+      },
+    });
+    return options.slice(0, 4);
+  }
+
+  // 5. Default high-leverage contextual options for any query/prompt
+  const criticalNode = params.nodes.find((n) => n.priority === 'critical');
+  const inProgNode = params.nodes.find((n) => n.status === 'in_progress');
+  const todoNode = params.nodes.find((n) => n.status === 'todo');
+
+  if (criticalNode) {
+    options.push({
+      id: `opt-def-crit-${criticalNode.id}-${Date.now()}`,
+      label: `Focus Blocker: "${criticalNode.title.slice(0, 20)}"`,
+      icon: 'zap',
+      action: {
+        type: 'open_task',
+        taskId: criticalNode.id,
+        taskTitle: criticalNode.title,
+        field: 'all',
+        label: `Opened Critical Item "${criticalNode.title}"`,
+      },
+    });
+  }
+
+  options.push({
+    id: `opt-def-cal-${Date.now()}`,
+    label: 'Open Calendar View',
+    icon: 'calendar',
+    action: {
+      type: 'switch_view',
+      target: 'calendar',
+      label: 'Switched to Calendar View',
+    },
+  });
+
+  options.push({
+    id: `opt-def-board-${Date.now()}`,
+    label: 'Open Kanban Board',
+    icon: 'board',
+    action: {
+      type: 'switch_view',
+      target: 'board',
+      label: 'Switched to Board View',
+    },
+  });
+
+  if (inProgNode) {
+    options.push({
+      id: `opt-def-prog-${inProgNode.id}-${Date.now()}`,
+      label: `Inspect In Progress: "${inProgNode.title.slice(0, 20)}"`,
+      icon: 'inspect',
+      action: {
+        type: 'open_task',
+        taskId: inProgNode.id,
+        taskTitle: inProgNode.title,
+        field: 'all',
+        label: `Opened "${inProgNode.title}"`,
+      },
+    });
+  } else if (todoNode) {
+    options.push({
+      id: `opt-def-start-${todoNode.id}-${Date.now()}`,
+      label: `Start: "${todoNode.title.slice(0, 20)}"`,
+      icon: 'zap',
+      action: {
+        type: 'update_field',
+        taskId: todoNode.id,
+        taskTitle: todoNode.title,
+        field: 'status',
+        value: 'in_progress',
+        label: `Marked "${todoNode.title}" In Progress`,
+      },
+    });
+  } else {
+    options.push({
+      id: `opt-def-filter-${Date.now()}`,
+      label: 'Filter: In Progress Tasks',
+      icon: 'filter',
+      action: {
+        type: 'filter_tasks',
+        target: 'in progress',
+        label: 'Filtered for In Progress Tasks',
+      },
+    });
+  }
+
+  return options.slice(0, 4);
 }
 
 export async function createTaskadeWorkflow(

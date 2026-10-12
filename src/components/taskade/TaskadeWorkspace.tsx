@@ -13,6 +13,7 @@ import {
   Edit3,
   ExternalLink,
   Eye,
+  Filter,
   GitBranch,
   LayoutGrid,
   List,
@@ -34,6 +35,8 @@ import {
   Zap,
 } from 'lucide-react';
 import {
+  AgentActionOption,
+  AgentActionPayload,
   createTaskadeAgent,
   createTaskadeNode,
   createTaskadeWorkflow,
@@ -106,6 +109,7 @@ interface ChatMessage {
   sender: 'user' | 'agent';
   text: string;
   actionTaken?: string;
+  options?: AgentActionOption[];
 }
 
 interface TaskadeWorkspaceProps {
@@ -488,6 +492,74 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
     }
   };
 
+  const executeAgentAction = (act: AgentActionPayload, fallbackTask?: TaskItem | null) => {
+    if (act.type === 'switch_view' && act.target) {
+      setView(act.target as ProjectView);
+      setSection('apps');
+      setSelectedTask(null);
+    } else if (act.type === 'switch_section' && act.target) {
+      setSection(act.target as MainSection);
+      setSelectedTask(null);
+    } else if (act.type === 'switch_workspace' && act.target) {
+      setSelectedTask(null);
+      const targetDomain = act.target.toLowerCase();
+      const matchedWs = workspaceList.find(
+        (w) =>
+          (w.domain && w.domain.toLowerCase().includes(targetDomain)) ||
+          (w.slug && w.slug.toLowerCase().includes(targetDomain)) ||
+          w.name.toLowerCase().includes(targetDomain)
+      );
+      if (matchedWs) {
+        void selectWorkspace(matchedWs);
+      }
+    } else if (act.type === 'open_adaptive') {
+      onOpenAdaptiveCanvas();
+    } else if (act.type === 'open_task' && act.taskId) {
+      const targetItem = tasks.find((t) => t.id === act.taskId) || fallbackTask;
+      if (targetItem) {
+        setSelectedTask(targetItem);
+        setFocusedCell({ taskId: act.taskId, field: act.field || 'all' });
+        setTimeout(() => setFocusedCell(null), 3500);
+      }
+      setView('table');
+      setSection('apps');
+    } else if (act.type === 'update_field' && act.taskId && act.field) {
+      const propField = act.field === 'due_date' ? 'dueDate' : act.field;
+      void updateTaskField(act.taskId, propField as keyof TaskItem, act.value);
+      setFocusedCell({ taskId: act.taskId, field: propField });
+      setTimeout(() => setFocusedCell(null), 3500);
+    } else if (act.type === 'delete_task' && act.taskId) {
+      void deleteTask(act.taskId);
+    } else if (act.type === 'update_task' && act.taskId) {
+      void toggleTask(act.taskId);
+      setFocusedCell({ taskId: act.taskId, field: 'status' });
+      setTimeout(() => setFocusedCell(null), 3500);
+    } else if (act.type === 'filter_tasks') {
+      setSearch(act.target || '');
+    } else if (act.type === 'create_task' && act.createdTask) {
+      const item = toTaskItem(act.createdTask);
+      setTasks((current) => [item, ...current]);
+      setFocusedCell({ taskId: item.id, field: 'all' });
+      setTimeout(() => setFocusedCell(null), 3500);
+    }
+  };
+
+  const handleSelectOption = (messageId: string, option: AgentActionOption) => {
+    setChatMessages((current) =>
+      current.map((msg) => {
+        if (msg.id !== messageId || !msg.options) return msg;
+        return {
+          ...msg,
+          options: msg.options.map((opt) =>
+            opt.id === option.id ? { ...opt, applied: true } : opt
+          ),
+        };
+      })
+    );
+
+    executeAgentAction(option.action);
+  };
+
   const sendMessage = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const message = chatInput.trim();
@@ -529,47 +601,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
 
       if (result.actions && result.actions.length > 0) {
         for (const act of result.actions) {
-          if (act.type === 'switch_view' && act.target) {
-            setView(act.target as ProjectView);
-            setSection('apps');
-            setSelectedTask(null);
-          } else if (act.type === 'switch_section' && act.target) {
-            setSection(act.target as MainSection);
-            setSelectedTask(null);
-          } else if (act.type === 'switch_workspace' && act.target) {
-            setSelectedTask(null);
-            const targetDomain = act.target.toLowerCase();
-            const matchedWs = workspaceList.find(
-              (w) =>
-                (w.domain && w.domain.toLowerCase().includes(targetDomain)) ||
-                (w.slug && w.slug.toLowerCase().includes(targetDomain)) ||
-                w.name.toLowerCase().includes(targetDomain)
-            );
-            if (matchedWs) {
-              void selectWorkspace(matchedWs);
-            }
-          } else if (act.type === 'open_adaptive') {
-            onOpenAdaptiveCanvas();
-          } else if (act.type === 'open_task' && act.taskId) {
-            const targetItem = tasks.find((t) => t.id === act.taskId) ||
-              (result.createdTasks?.find((t) => t.id === act.taskId) ? toTaskItem(result.createdTasks.find((t) => t.id === act.taskId)!) : newlyCreatedItem);
-            if (targetItem) {
-              setSelectedTask(targetItem);
-              setFocusedCell({ taskId: act.taskId, field: act.field || 'all' });
-              setTimeout(() => setFocusedCell(null), 3000);
-            }
-            setView('table');
-            setSection('apps');
-          } else if (act.type === 'update_field' && act.taskId && act.field) {
-            const propField = act.field === 'due_date' ? 'dueDate' : act.field;
-            void updateTaskField(act.taskId, propField as keyof TaskItem, act.value);
-          } else if (act.type === 'delete_task' && act.taskId) {
-            void deleteTask(act.taskId);
-          } else if (act.type === 'update_task' && act.taskId) {
-            void toggleTask(act.taskId);
-          } else if (act.type === 'filter_tasks') {
-            setSearch(act.target || '');
-          }
+          executeAgentAction(act, newlyCreatedItem);
         }
       }
 
@@ -584,6 +616,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
           sender: 'agent',
           text: result.reply,
           actionTaken: actionSummary,
+          options: result.options,
         },
       ]);
     } catch (error) {
@@ -891,6 +924,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
           isSending={isSendingMessage}
           onInputChange={setChatInput}
           onSend={sendMessage}
+          onSelectOption={handleSelectOption}
           onSwitchView={(newView) => {
             setView(newView);
             setSection('apps');
@@ -1657,6 +1691,7 @@ interface AgentDrawerProps {
   onOpenTask?: (task: TaskItem) => void;
   onOpenAdaptiveCanvas: () => void;
   onClose: () => void;
+  onSelectOption?: (messageId: string, option: AgentActionOption) => void;
 }
 
 const AgentDrawer: React.FC<AgentDrawerProps> = ({
@@ -1678,6 +1713,7 @@ const AgentDrawer: React.FC<AgentDrawerProps> = ({
   onOpenTask,
   onOpenAdaptiveCanvas,
   onClose,
+  onSelectOption,
 }) => {
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -1873,6 +1909,56 @@ const AgentDrawer: React.FC<AgentDrawerProps> = ({
                         </div>
                       )}
                       <div>{formatText(message.text)}</div>
+                      {message.options && message.options.length > 0 && (
+                        <div className="td-chat-options-group" role="group" aria-label="Select an action">
+                          <span className="td-options-header">Select an action:</span>
+                          <div className="td-chat-options-list">
+                            {message.options.map((opt) => {
+                              const isApplied = !!opt.applied;
+                              return (
+                                <button
+                                  key={opt.id}
+                                  type="button"
+                                  className={`td-chat-option-btn ${isApplied ? 'is-applied' : ''}`}
+                                  disabled={isApplied}
+                                  onClick={() => onSelectOption && onSelectOption(message.id, opt)}
+                                  title={isApplied ? 'Action already applied' : opt.label}
+                                >
+                                  <span className="td-option-icon">
+                                    {isApplied ? (
+                                      <Check size={12} />
+                                    ) : opt.icon === 'calendar' ? (
+                                      <CalendarDays size={12} />
+                                    ) : opt.icon === 'table' ? (
+                                      <Table2 size={12} />
+                                    ) : opt.icon === 'board' ? (
+                                      <LayoutGrid size={12} />
+                                    ) : opt.icon === 'mindmap' ? (
+                                      <GitBranch size={12} />
+                                    ) : opt.icon === 'zap' ? (
+                                      <Zap size={12} />
+                                    ) : opt.icon === 'user' ? (
+                                      <Users size={12} />
+                                    ) : opt.icon === 'filter' ? (
+                                      <Filter size={12} />
+                                    ) : opt.icon === 'plus' ? (
+                                      <Plus size={12} />
+                                    ) : opt.icon === 'inspect' ? (
+                                      <Eye size={12} />
+                                    ) : opt.icon === 'workflow' ? (
+                                      <Workflow size={12} />
+                                    ) : (
+                                      <Sparkles size={12} />
+                                    )}
+                                  </span>
+                                  <span className="td-option-label">{opt.label}</span>
+                                  {isApplied && <span className="td-option-applied-tag">Applied</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ) : (
