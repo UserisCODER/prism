@@ -78,9 +78,9 @@ export const GitHubWorkspaceLayout: React.FC = () => {
         {/* Repo action buttons */}
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {[
-            { label: '⭐ Star', count: '42' },
-            { label: '🍴 Fork', count: '8' },
-            { label: '👁️ Watch', count: '12' },
+            { label: 'Star', count: '42' },
+            { label: 'Fork', count: '8' },
+            { label: 'Watch', count: '12' },
           ].map(btn => (
             <button key={btn.label} style={{ background: '#21262d', border: '1px solid #30363d', borderRadius: '6px', padding: '5px 12px', fontSize: '12px', color: '#e6edf3', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 500 }}
               onMouseEnter={e => (e.currentTarget.style.background = '#30363d')}
@@ -128,7 +128,6 @@ export const GitHubWorkspaceLayout: React.FC = () => {
       {/* PRISM Intent Bar — styled as GitHub search/filter bar */}
       <div style={{ background: '#0d1117', borderBottom: '1px solid #30363d', padding: '12px 32px', display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: '6px', padding: '4px 10px', fontSize: '12px', color: '#8b949e', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span>🤖</span>
           <span style={{ color: '#58a6ff', fontWeight: 600 }}>PRISM AI</span>
           <span>— adaptive workspace active</span>
         </div>

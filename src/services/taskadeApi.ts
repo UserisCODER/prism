@@ -110,14 +110,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 const DEFAULT_STARTER_WORKSPACES: TaskadeWorkspaceRecord[] = [
   {
     id: 'ws-1',
-    name: 'Salesforce CRM',
-    domain: 'salesforce.com',
-    slug: 'salesforce-crm',
-    description: 'Enterprise pipeline management, client accounts, and renewal tracking.',
-    icon: 'sparkles',
-  },
-  {
-    id: 'ws-2',
     name: 'Acme Corp Account',
     domain: 'acmecorp.com',
     slug: 'acme-corp',
@@ -125,7 +117,7 @@ const DEFAULT_STARTER_WORKSPACES: TaskadeWorkspaceRecord[] = [
     icon: 'briefcase',
   },
   {
-    id: 'ws-3',
+    id: 'ws-2',
     name: 'Sprint 24 & Delivery',
     domain: 'github.com',
     slug: 'sprint-24',
@@ -133,28 +125,12 @@ const DEFAULT_STARTER_WORKSPACES: TaskadeWorkspaceRecord[] = [
     icon: 'terminal',
   },
   {
-    id: 'ws-4',
+    id: 'ws-3',
     name: 'European Gateway Telemetry',
     domain: 'cloud.telemetry.io',
     slug: 'eu-gateway',
     description: 'Regional login monitoring, connection pool latency, and incident resolution.',
     icon: 'activity',
-  },
-  {
-    id: 'ws-5',
-    name: 'Strata Cloud Infrastructure',
-    domain: 'stratacloud.io',
-    slug: 'strata-cloud',
-    description: 'Multi-region failover cluster benchmarks and database replication.',
-    icon: 'cloud',
-  },
-  {
-    id: 'ws-6',
-    name: 'Summit Financial Enterprise',
-    domain: 'summitfin.com',
-    slug: 'summit-fin',
-    description: '$135k ARR annual license renewal, SLA uptime metrics, and invoice schedules.',
-    icon: 'dollar-sign',
   },
 ];
 
@@ -255,7 +231,7 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
         priority: 'critical',
         order_index: 1,
         assignee: 'Sarah Lin',
-        tags: ['Executive', 'Meeting'],
+        tags: ['Executive', 'Meeting', 'Acme'],
         due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
       },
       {
@@ -267,7 +243,7 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
         priority: 'high',
         order_index: 2,
         assignee: 'Alex Rivera',
-        tags: ['Sprint 24', 'Docs'],
+        tags: ['Sprint 24', 'Docs', 'Overdue'],
         due_date: new Date(Date.now() - 86400000 * 2).toISOString(),
       },
       {
@@ -279,19 +255,19 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
         priority: 'high',
         order_index: 3,
         assignee: 'Sarah Lin',
-        tags: ['Sprint 24', 'Security'],
+        tags: ['Sprint 24', 'Security', 'Blocked'],
         due_date: new Date(Date.now() - 86400000 * 1).toISOString(),
       },
       {
         id: 'node-5',
         project_id: 'proj-1',
         title: 'Finalize Mobile Release Notes',
-        content: 'Sprint 24 deliverable. Drafted and waiting on final sign-off before submission.',
+        content: 'Sprint 24 deliverable overdue. Drafted and waiting on final sign-off before submission.',
         status: 'todo',
         priority: 'medium',
         order_index: 4,
         assignee: 'David Chen',
-        tags: ['Sprint 24', 'Release'],
+        tags: ['Sprint 24', 'Release', 'Overdue'],
         due_date: new Date(Date.now() - 86400000 * 3).toISOString(),
       },
       {
@@ -303,7 +279,7 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
         priority: 'high',
         order_index: 5,
         assignee: 'Sarah Lin',
-        tags: ['Finance', 'Legal'],
+        tags: ['Finance', 'Legal', 'Acme'],
         due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
       },
       {
@@ -327,104 +303,8 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
         priority: 'high',
         order_index: 7,
         assignee: 'Alex Rivera',
-        tags: ['Telemetry', 'SRE'],
+        tags: ['Telemetry', 'SRE', 'Gateway'],
         due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
-      },
-      {
-        id: 'node-9',
-        project_id: 'proj-1',
-        title: 'Schedule Q4 Platform Review with Nexus Logistics',
-        content: 'Discuss expansion into freight tracking automation with David Chen.',
-        status: 'todo',
-        priority: 'medium',
-        order_index: 8,
-        assignee: 'Sarah Lin',
-        tags: ['Outreach', 'Expansion'],
-        due_date: new Date(Date.now() + 86400000 * 4).toISOString(),
-      },
-      {
-        id: 'node-10',
-        project_id: 'proj-1',
-        title: 'Deploy Automated Slack Alert Webhooks',
-        content: 'Dispatches real-time alerts when regional login drops exceed 10% threshold.',
-        status: 'done',
-        priority: 'high',
-        order_index: 9,
-        assignee: 'Alex Rivera',
-        tags: ['Automation', 'DevOps'],
-        due_date: new Date(Date.now() - 86400000 * 2).toISOString(),
-      },
-      {
-        id: 'node-11',
-        project_id: 'proj-1',
-        title: 'Benchmark Database Connection Resiliency',
-        content: 'Stress testing connection pools for Black Friday retail traffic spike.',
-        status: 'in_progress',
-        priority: 'medium',
-        order_index: 10,
-        assignee: 'David Chen',
-        tags: ['Performance', 'Database'],
-        due_date: new Date(Date.now() + 86400000 * 5).toISOString(),
-      },
-      {
-        id: 'node-12',
-        project_id: 'proj-1',
-        title: 'Audit SOC2 Multi-Region Failover Logs',
-        content: 'Quarterly compliance verification for Vertex Health healthcare tenants.',
-        status: 'done',
-        priority: 'low',
-        order_index: 11,
-        assignee: 'Alex Rivera',
-        tags: ['Security', 'Compliance'],
-        due_date: new Date(Date.now() - 86400000 * 3).toISOString(),
-      },
-      {
-        id: 'node-13',
-        project_id: 'proj-1',
-        title: 'Configure Multi-Region Backup Replication',
-        content: 'Setup automated snapshot sync for Strata Cloud healthcare database clusters.',
-        status: 'in_progress',
-        priority: 'medium',
-        order_index: 12,
-        assignee: 'Alex Rivera',
-        tags: ['Cloud', 'Backup'],
-        due_date: new Date(Date.now() + 86400000 * 2).toISOString(),
-      },
-      {
-        id: 'node-14',
-        project_id: 'proj-1',
-        title: 'Review Q4 Capacity Forecast for Black Friday',
-        content: 'Ensure Orion Retail cluster can handle 12,000 requests/sec with zero latency degradation.',
-        status: 'in_progress',
-        priority: 'high',
-        order_index: 13,
-        assignee: 'Sarah Lin',
-        tags: ['Retail', 'Capacity'],
-        due_date: new Date(Date.now() + 86400000 * 3).toISOString(),
-      },
-      {
-        id: 'node-15',
-        project_id: 'proj-1',
-        title: 'Automate Customer SLA Breach Webhook Dispatch',
-        content: 'Direct integration sending incident payload to Slack ops and pager channels.',
-        status: 'in_progress',
-        priority: 'high',
-        order_index: 14,
-        assignee: 'Alex Rivera',
-        tags: ['Automation', 'SRE'],
-        due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
-      },
-      {
-        id: 'node-16',
-        project_id: 'proj-1',
-        title: 'Summit Financial Annual Renewal Addendum ($135k ARR)',
-        content: 'Board approved tiered volume discounts for annual enterprise license renewal.',
-        status: 'done',
-        priority: 'critical',
-        order_index: 15,
-        assignee: 'Sarah Lin',
-        tags: ['Finance', 'Renewal'],
-        due_date: new Date(Date.now() - 86400000 * 1).toISOString(),
       },
     ],
   },
@@ -456,30 +336,6 @@ const DEFAULT_STARTER_PROJECTS: TaskadeProjectRecord[] = [
         order_index: 1,
         assignee: 'Marcus Vance',
         tags: ['Budget', 'Finance'],
-        due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
-      },
-      {
-        id: 'node-203',
-        project_id: 'proj-2',
-        title: 'Prepare Alex Rivera Architecture Performance Summary',
-        content: 'Document European cluster recovery benchmarks and 99.9% uptime records.',
-        status: 'review',
-        priority: 'medium',
-        order_index: 2,
-        assignee: 'Alex Rivera',
-        tags: ['Architecture', 'Technical'],
-        due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
-      },
-      {
-        id: 'node-204',
-        project_id: 'proj-2',
-        title: 'Finalize Contract Renewal Addendum ($120k ARR)',
-        content: 'Legal and financial addendum ready for execution following tomorrow morning sync.',
-        status: 'in_progress',
-        priority: 'critical',
-        order_index: 3,
-        assignee: 'Sarah Lin',
-        tags: ['Legal', 'Renewal'],
         due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
       },
     ],
@@ -728,37 +584,99 @@ export async function sendTaskadeAgentMessage(input: {
   nodes: TaskadeNodeRecord[];
 }): Promise<SendAgentMessageResult> {
   const actions: AgentActionPayload[] = [];
-  const lower = input.message.toLowerCase();
+  const lower = input.message.toLowerCase().trim();
 
-  // Helper to find best matching node
-  const findMatchingNode = (query: string): TaskadeNodeRecord | undefined => {
+  // Helper to find matching nodes
+  const findMatchingNodes = (query: string): TaskadeNodeRecord[] => {
     const q = query.trim().toLowerCase();
-    if (!q) return undefined;
+    if (!q) return [];
 
-    const ignoreWords = new Set([
-      'task', 'item', 'open', 'please', 'change', 'update', 'status', 'priority',
-      'assign', 'assignee', 'view', 'table', 'board', 'calendar', 'mindmap', 'mind',
-      'map', 'list', 'show', 'inspect', 'look', 'at', 'record', 'row', 'can', 'you'
-    ]);
+    const matches: TaskadeNodeRecord[] = [];
+    const seen = new Set<string>();
 
-    // 1. Exact or substring match in node title
-    const exact = input.nodes.find((n) => {
-      const nLower = n.title.toLowerCase();
-      return nLower === q || (q.length >= 4 && (nLower.includes(q) || q.includes(nLower)));
-    });
-    if (exact) return exact;
+    const addIfUnique = (n: TaskadeNodeRecord) => {
+      if (!seen.has(n.id)) {
+        seen.add(n.id);
+        matches.push(n);
+      }
+    };
 
-    // 2. Significant word match
-    const words = q.split(/\s+/).filter((w) => w.length > 3 && !ignoreWords.has(w));
-    if (words.length > 0) {
-      const wordMatch = input.nodes.find((n) => {
-        const nLower = n.title.toLowerCase();
-        return words.some((w) => nLower.includes(w));
-      });
-      if (wordMatch) return wordMatch;
+    // Person queries
+    if (q.includes('sarah')) {
+      input.nodes.filter((n) => n.assignee?.toLowerCase().includes('sarah')).forEach(addIfUnique);
+    }
+    if (q.includes('alex')) {
+      input.nodes.filter((n) => n.assignee?.toLowerCase().includes('alex')).forEach(addIfUnique);
+    }
+    if (q.includes('david')) {
+      input.nodes.filter((n) => n.assignee?.toLowerCase().includes('david')).forEach(addIfUnique);
+    }
+    if (q.includes('marcus')) {
+      input.nodes.filter((n) => n.title.toLowerCase().includes('marcus') || n.content?.toLowerCase().includes('marcus')).forEach(addIfUnique);
     }
 
-    return undefined;
+    // Status queries
+    if (q.includes('overdue') || q.includes('late')) {
+      input.nodes.filter((n) =>
+        n.status === 'todo' && (n.tags?.includes('Overdue') || n.title.toLowerCase().includes('overdue') || (n.due_date && new Date(n.due_date).getTime() < Date.now()))
+      ).forEach(addIfUnique);
+      if (matches.length === 0) {
+        input.nodes.filter((n) => n.id === 'node-3' || n.id === 'node-5').forEach(addIfUnique);
+      }
+    }
+    if (q.includes('blocked') || q.includes('blocker')) {
+      input.nodes.filter((n) =>
+        n.status === 'review' || n.tags?.includes('Blocked') || n.content?.toLowerCase().includes('blocked')
+      ).forEach(addIfUnique);
+      if (matches.length === 0) {
+        input.nodes.filter((n) => n.id === 'node-4').forEach(addIfUnique);
+      }
+    }
+    if (q.includes('critical')) {
+      input.nodes.filter((n) => n.priority === 'critical').forEach(addIfUnique);
+    }
+    if (q.includes('in progress') || q.includes('in_progress')) {
+      input.nodes.filter((n) => n.status === 'in_progress').forEach(addIfUnique);
+    }
+    if (q.includes('done') || q.includes('completed')) {
+      input.nodes.filter((n) => n.status === 'done').forEach(addIfUnique);
+    }
+
+    // Topic keywords
+    if (q.includes('renewal') || q.includes('acme') || q.includes('120k')) {
+      input.nodes.filter((n) => n.title.toLowerCase().includes('acme') || n.title.toLowerCase().includes('renewal')).forEach(addIfUnique);
+    }
+    if (q.includes('brief') || q.includes('meeting')) {
+      input.nodes.filter((n) => n.title.toLowerCase().includes('meeting') || n.title.toLowerCase().includes('brief')).forEach(addIfUnique);
+    }
+    if (q.includes('sdk') || q.includes('documentation') || q.includes('api doc')) {
+      input.nodes.filter((n) => n.title.toLowerCase().includes('documentation') || n.title.toLowerCase().includes('sdk')).forEach(addIfUnique);
+    }
+    if (q.includes('security') || q.includes('audit') || q.includes('checklist')) {
+      input.nodes.filter((n) => n.title.toLowerCase().includes('security') || n.title.toLowerCase().includes('audit')).forEach(addIfUnique);
+    }
+    if (q.includes('mobile') || q.includes('release')) {
+      input.nodes.filter((n) => n.title.toLowerCase().includes('mobile') || n.title.toLowerCase().includes('release')).forEach(addIfUnique);
+    }
+    if (q.includes('gateway') || q.includes('latency') || q.includes('telemetry') || q.includes('connection pool') || q.includes('login drop')) {
+      input.nodes.filter((n) => n.title.toLowerCase().includes('gateway') || n.title.toLowerCase().includes('login drop')).forEach(addIfUnique);
+    }
+
+    // Direct token search
+    const cleanTokens = q.split(/\s+/).filter((t) => t.length > 3 && !['what', 'show', 'open', 'find', 'task', 'tasks', 'have', 'with', 'about', 'this', 'your', 'list'].includes(t));
+    if (cleanTokens.length > 0) {
+      input.nodes.filter((n) => cleanTokens.some((t) => n.title.toLowerCase().includes(t) || n.content?.toLowerCase().includes(t))).forEach(addIfUnique);
+    }
+
+    return matches;
+  };
+
+  const findMatchingNode = (query: string): TaskadeNodeRecord | undefined => {
+    const list = findMatchingNodes(query);
+    if (list.length > 0) return list[0];
+
+    const q = query.trim().toLowerCase();
+    return input.nodes.find((n) => n.title.toLowerCase() === q || n.id.toLowerCase() === q);
   };
 
   // 1. Detect View / Tab Navigation
@@ -790,19 +708,19 @@ export async function sendTaskadeAgentMessage(input: {
   }
 
   // 3. Detect Workspace Navigation
-  if (lower.includes('github') || lower.includes('git repo')) {
-    actions.push({ type: 'switch_workspace', target: 'github', label: 'Switched to GitHub Workspace' });
-  } else if (lower.includes('notion') || lower.includes('wiki') || lower.includes('docs')) {
-    actions.push({ type: 'switch_workspace', target: 'notion', label: 'Switched to Notion Workspace' });
-  } else if (lower.includes('salesforce') || lower.includes('crm') || lower.includes('deals')) {
-    actions.push({ type: 'switch_workspace', target: 'salesforce', label: 'Switched to Salesforce CRM Workspace' });
+  if (lower.includes('github') || lower.includes('git repo') || lower.includes('sprint 24 workspace')) {
+    actions.push({ type: 'switch_workspace', target: 'github', label: 'Switched to Sprint 24 & Delivery Workspace' });
+  } else if (lower.includes('telemetry') || lower.includes('gateway workspace')) {
+    actions.push({ type: 'switch_workspace', target: 'eu-gateway', label: 'Switched to European Gateway Telemetry Workspace' });
+  } else if (lower.includes('acme') && (lower.includes('workspace') || lower.includes('switch'))) {
+    actions.push({ type: 'switch_workspace', target: 'acme-corp', label: 'Switched to Acme Corp Account Workspace' });
   }
 
   // 4. Detect Adaptive Canvas & 3 Hackathon Intent Scenarios
-  const isMeetingPrep = lower.includes('meeting') || lower.includes('client meeting') || lower.includes('prepare') || lower.includes('acme') || lower.includes('meridian');
-  const isUsageDrop = lower.includes('usage') || lower.includes('drop in') || lower.includes('smb') || lower.includes('why did usage') || lower.includes('anomaly');
-  const isOverdueWork = lower.includes('overdue') || lower.includes('late') || lower.includes('blocker') || lower.includes('deadline');
-  const isAdaptiveQuery = lower.includes('adaptive') || lower.includes('canvas') || lower.includes('prism view') || lower.includes('prism canvas');
+  const isMeetingPrep = lower.includes('meeting') || lower.includes('client meeting') || lower.includes('prepare') || (lower.includes('acme') && !lower.includes('only acme') && !lower.includes('open acme'));
+  const isUsageDrop = lower.includes('usage') || lower.includes('drop in') || lower.includes('why did usage') || lower.includes('anomaly') || (lower.includes('drop') && !lower.includes('dropdown'));
+  const isOverdueWork = (lower.includes('overdue') && !lower.includes('filter overdue')) || lower.includes('blocker') || lower.includes('deadline') || lower.includes('late tasks');
+  const isAdaptiveQuery = lower.includes('adaptive') || lower.includes('canvas') || lower.includes('deck') || lower.includes('prism view');
 
   let adaptiveReply = '';
   let reply = '';
@@ -810,47 +728,109 @@ export async function sendTaskadeAgentMessage(input: {
   if (isMeetingPrep) {
     actions.push({ type: 'adapt_scenario', target: 'meeting_prep', label: 'Adapted workspace for Client Meeting Prep' });
     actions.push({ type: 'switch_view', target: 'adaptive', label: 'Opened Adaptive Deck' });
-    adaptiveReply = `### Client Meeting Prep Mode Active\n**Goal**: Prepare tomorrow's quarterly review with **Acme Corp**.\n\n* **Why Surfaced**: Calendar invite scheduled for tomorrow at 10:00 AM regarding annual contract renewal ($120k ARR).\n* **Surfaced Components**: Account Overview, Attendee Profiles (Sarah Lin, Marcus Vance, Alex Rivera), Agenda, and Action Items.\n\nThe adaptive workspace on your left has reorganized itself for this meeting. Select an action below to proceed:`;
+    adaptiveReply = `Client Meeting Prep Mode Active
+
+[Reference: Database Client - Acme Corp ($120k ARR, 150 Active Seats)]
+[Reference: Calendar Invite - Tomorrow at 10:00 AM Executive Sync]
+[Reference: Key Stakeholders - Sarah Lin (VP Product), Marcus Vance (Finance Director)]
+
+Goal: Prepare tomorrow's annual contract renewal and 50-seat expansion review ($120k ARR).
+
+Matching Workspace Deliverables:
+• [Reference: Task node-1] Acme Corp Enterprise Contract Renewal ($120k ARR) | Assignee: Sarah Lin | Status: IN PROGRESS | Priority: CRITICAL
+• [Reference: Task node-2] Prepare Acme Corp 10:00 AM Meeting Brief | Assignee: Sarah Lin | Status: IN PROGRESS | Priority: CRITICAL
+• [Reference: Task node-6] Send Revised Contract Addendum to Marcus Vance | Assignee: Sarah Lin | Status: IN PROGRESS | Priority: HIGH
+
+Telemetry Uptime: 99.9% quarterly uptime verified.
+
+The Adaptive Deck panel has been surfaced on your screen. Select an action below to inspect individual records or advance renewal deliverables.`;
   } else if (isUsageDrop) {
     actions.push({ type: 'adapt_scenario', target: 'usage_drop', label: 'Adapted workspace for Usage Drop Diagnostic' });
     actions.push({ type: 'switch_view', target: 'adaptive', label: 'Opened Adaptive Deck' });
-    adaptiveReply = `### Usage Drop Diagnostic Mode Active\n**Goal**: Investigate **15% drop** in active user logins this week.\n\n* **Why Surfaced**: System telemetry flagged a temporary login drop in the European region following Tuesday's gateway update.\n* **Surfaced Components**: Usage Metrics, Region Breakdown, Root Cause Analysis, and Incident Actions.\n\nThe workspace on your left has reorganized into diagnostic mode. Select an action below:`;
+    adaptiveReply = `Usage Drop Diagnostic Mode Active
+
+[Reference: Telemetry Metric - European Gateway 15.2% Login Drop (Tuesday 2:00 PM)]
+[Reference: Root Cause - Connection Pool Saturation following Gateway Build #491]
+[Reference: Resolution - Connection Pool Hotfix Deployed at Tuesday 4:30 PM (Latency Restored to 42ms)]
+
+Goal: Investigate active user login drop in the European region and verify service recovery.
+
+Matching Workspace Deliverables:
+• [Reference: Task node-7] Investigate European Region Login Drop (15.2%) | Assignee: Alex Rivera | Status: DONE | Priority: CRITICAL
+• [Reference: Task node-8] Verify European Gateway Connection Pool Latency | Assignee: Alex Rivera | Status: IN PROGRESS | Priority: HIGH
+
+Current Status: Regional connection pool limits raised to 850 concurrent sessions; zero connection dropouts logged in the last 48 hours.
+
+The Adaptive Deck panel has opened the diagnostic telemetry view. Select an action below to proceed.`;
   } else if (isOverdueWork) {
     actions.push({ type: 'adapt_scenario', target: 'overdue_work', label: 'Adapted workspace for Overdue Project Work' });
     actions.push({ type: 'switch_view', target: 'adaptive', label: 'Opened Adaptive Deck' });
-    adaptiveReply = `### Overdue Project Work Mode Active\n**Goal**: Review overdue tasks and blockers for this sprint.\n\n* **Why Surfaced**: 3 project deliverables passed their due dates due to pending legal review.\n* **Surfaced Components**: Overdue Deliverables List, Owner Assignments, Blocker Summary, and Team Reassignment Actions.\n\nThe workspace on your left has brought overdue tasks and assignments into focus. Select an action below:`;
+    adaptiveReply = `Overdue Project Work Mode Active
+
+[Reference: Project - Sprint 24 Delivery (74% Complete, 3 Overdue Deliverables)]
+[Reference: Legal Blocker - Clause 4.2 Review pending on Security Audit Checklist]
+[Reference: Workload Bottleneck - Sarah Lin currently assigned 4 concurrent deliverables]
+
+Goal: Review overdue tasks and clear blockers for Sprint 24.
+
+Matching Overdue Deliverables:
+• [Reference: Task node-3] Update API Documentation for Client SDK | Assignee: Alex Rivera | Status: TODO | Priority: HIGH | Due: 2 days ago
+• [Reference: Task node-4] Review Security Audit Checklist | Assignee: Sarah Lin | Status: IN REVIEW | Priority: HIGH | Blocker: Clause 4.2
+• [Reference: Task node-5] Finalize Mobile Release Notes | Assignee: David Chen | Status: TODO | Priority: MEDIUM | Due: 3 days ago
+
+The Adaptive Deck panel has highlighted overdue deliverables and team allocations. Select an action below to rebalance assignments or unblock delivery.`;
   } else if (isAdaptiveQuery) {
     actions.push({ type: 'open_adaptive', label: 'Opened PRISM Adaptive Canvas' });
   }
 
-  // 5. Detect "Open / View / Inspect" on a specific task
-  // Never treat pure view switches (e.g. calendar, board, table) as task open commands
+  // 5. Detect "Open / View / Inspect" or direct search for tasks
   const isViewOnlyNavigation = isCalendarQuery || isBoardQuery || isMindmapQuery || isListQuery || (isTableQuery && !lower.includes('task'));
 
   let openedNode: TaskadeNodeRecord | undefined;
-  if (!isViewOnlyNavigation) {
-    const isOpenCommand =
-      lower.startsWith('open task') ||
-      lower.includes('open task') ||
-      lower.includes('inspect ') ||
-      (lower.startsWith('open ') && !lower.startsWith('open calendar') && !lower.startsWith('open board') && !lower.startsWith('open table')) ||
-      input.nodes.some((n) => lower.includes(n.title.toLowerCase()));
+  let matchingRecords: TaskadeNodeRecord[] = [];
 
-    if (isOpenCommand) {
-      const targetQuery = lower.replace(/^(please\s+)?(can you\s+)?(open|inspect|view|show)\s+(task\s+|record\s+|row\s+)?/i, '').trim();
-      openedNode = findMatchingNode(targetQuery || lower);
-      if (openedNode) {
-        if (!actions.some((a) => a.type === 'switch_view')) {
-          actions.push({ type: 'switch_view', target: 'table', label: 'Switched to Table View' });
-        }
-        actions.push({
-          type: 'open_task',
-          taskId: openedNode.id,
-          taskTitle: openedNode.title,
-          field: 'all',
-          label: `Opened "${openedNode.title}" in Task Inspector`,
-        });
+  if (!isViewOnlyNavigation) {
+    const targetQuery = lower
+      .replace(/^(please\s+)?(can you\s+)?(open|inspect|view|show|find|search|filter)\s+(task\s+|record\s+|row\s+)?/i, '')
+      .trim();
+
+    matchingRecords = findMatchingNodes(targetQuery || lower);
+
+    const isOpenExplicit =
+      lower.startsWith('open ') ||
+      lower.startsWith('inspect ') ||
+      lower.startsWith('show ') ||
+      lower.includes('open task') ||
+      lower.includes('inspect task');
+
+    if (matchingRecords.length === 1 || (matchingRecords.length > 0 && isOpenExplicit)) {
+      openedNode = matchingRecords[0];
+      if (!actions.some((a) => a.type === 'switch_view')) {
+        actions.push({ type: 'switch_view', target: 'table', label: 'Switched to Table View' });
       }
+      actions.push({
+        type: 'open_task',
+        taskId: openedNode.id,
+        taskTitle: openedNode.title,
+        field: 'all',
+        label: `Opened "${openedNode.title}" in Task Inspector`,
+      });
+    } else if (matchingRecords.length > 1 && !isMeetingPrep && !isUsageDrop && !isOverdueWork) {
+      const filterTarget = targetQuery || lower;
+      actions.push({
+        type: 'filter_tasks',
+        target: filterTarget,
+        label: `Filtered workspace table for "${filterTarget}"`,
+      });
+      actions.push({ type: 'switch_view', target: 'table', label: 'Switched to Table View' });
+      openedNode = matchingRecords[0];
+      actions.push({
+        type: 'open_task',
+        taskId: openedNode.id,
+        taskTitle: openedNode.title,
+        field: 'all',
+        label: `Focused "${openedNode.title}" in Task Inspector`,
+      });
     }
   }
 
@@ -966,8 +946,8 @@ export async function sendTaskadeAgentMessage(input: {
     }
   }
 
-  // Filter Tasks
-  if (lower.includes('filter ') || lower.includes('show only ') || lower.includes('only critical') || lower.startsWith('filter') || (lower.includes('search ') && !lower.includes('search for node'))) {
+  // Filter Tasks Command
+  if (lower.includes('filter ') || lower.includes('show only ') || lower.startsWith('filter') || (lower.includes('search ') && !lower.includes('search for node'))) {
     let filterQuery = '';
     if (lower.includes('critical')) filterQuery = 'critical';
     else if (lower.includes('high')) filterQuery = 'high';
@@ -978,17 +958,21 @@ export async function sendTaskadeAgentMessage(input: {
       const match = lower.match(/(?:filter|search|find)\s+(?:by\s+|for\s+)?([\w\s]+)/i);
       if (match) filterQuery = match[1].trim();
     }
-    actions.push({
-      type: 'filter_tasks',
-      target: filterQuery,
-      label: filterQuery ? `Filtered workspace for "${filterQuery}"` : 'Cleared filter',
-    });
+    if (filterQuery && !actions.some((a) => a.type === 'filter_tasks')) {
+      actions.push({
+        type: 'filter_tasks',
+        target: filterQuery,
+        label: `Filtered workspace table for "${filterQuery}"`,
+      });
+      actions.push({ type: 'switch_view', target: 'table', label: 'Switched to Table View' });
+    }
   } else if (lower.includes('clear filter') || lower.includes('show all') || lower.includes('reset search') || lower.includes('unfilter') || lower === 'all') {
     actions.push({
       type: 'filter_tasks',
       target: '',
       label: 'Cleared table filter',
     });
+    actions.push({ type: 'switch_view', target: 'table', label: 'Switched to Table View' });
   }
 
   // Workspace Summary & Insights
@@ -1006,7 +990,18 @@ export async function sendTaskadeAgentMessage(input: {
     const inProg = input.nodes.filter((n) => n.status === 'in_progress').length;
     const critical = input.nodes.filter((n) => n.priority === 'critical');
 
-    reply = `### Workspace Health & Executive Summary\n* **Total Records**: ${total}\n* **In Progress**: ${inProg} item${inProg !== 1 ? 's' : ''}\n* **Completed**: ${completed} item${completed !== 1 ? 's' : ''}\n* **Critical Blockers**: ${critical.length} (${critical.map((c) => `"${c.title}"`).join(', ') || 'None'})\n\nSelect any real-time action below to update tasks or transition views in the background.`;
+    reply = `Workspace Health & Executive Summary
+
+[Reference: Database Client - Acme Corp ($120k ARR, 150 Active Seats)]
+[Reference: Sprint Deliverables - 8 Tasks across 3 Scenarios]
+
+Summary Breakdown:
+• Total Deliverables: ${total}
+• In Progress: ${inProg} items (Renewal, Meeting Brief, Addendum, Gateway Latency)
+• Completed: ${completed} items (European Login Investigation)
+• Critical Blockers: ${critical.length} (${critical.map((c) => `"${c.title}"`).join(', ') || 'None'})
+
+All items are synchronized across the table, board, and calendar views. Select an action below to inspect matching records or update statuses.`;
   }
 
   // Try Remote Chat API
@@ -1036,6 +1031,7 @@ export async function sendTaskadeAgentMessage(input: {
       const generatedOptions = payload.options || buildContextualOptions({
         nodes: input.nodes,
         openedNode,
+        matchingNodes: matchingRecords,
         modifiedNode,
         actions: uniqueActions,
         query: lower,
@@ -1050,10 +1046,10 @@ export async function sendTaskadeAgentMessage(input: {
       };
     }
   } catch (err) {
-    console.warn('[taskadeApi] Remote agent chat failed, engaging proactive local agent intelligence:', err);
+    console.warn('[taskadeApi] Remote agent chat fallback active, executing referenced local intelligence:', err);
   }
 
-  // Proactive Local Agent Fallback Engine
+  // Local Referenced Agent Engine
   const isTaskCreateRequest =
     lower.includes('create') ||
     lower.includes('add task') ||
@@ -1064,38 +1060,97 @@ export async function sendTaskadeAgentMessage(input: {
   let createdTasks: TaskadeNodeRecord[] = [];
 
   if (!reply) {
-    if (openedNode && !modifiedNode && !isTaskCreateRequest) {
-      reply = `Navigated to **Table View** and opened **"${openedNode.title}"** in the Task Inspector.\n\n* **Status**: \`${openedNode.status.toUpperCase()}\` • **Priority**: \`${openedNode.priority.toUpperCase()}\` • **Assignee**: ${openedNode.assignee || 'Unassigned'} • **Due**: ${openedNode.due_date || 'None'}\n\nAll fields are editable directly in the table or via the action buttons below.`;
+    if (matchingRecords.length > 1 && !isMeetingPrep && !isUsageDrop && !isOverdueWork) {
+      reply = `Matching Workspace Records
+
+[Reference: Search Query - "${input.message}"]
+[Reference: Matched Deliverables - ${matchingRecords.length} Items Found]
+
+Found ${matchingRecords.length} matching deliverables:
+${matchingRecords.map((m) => `• [Reference: Task ${m.id}] "${m.title}" | Assignee: ${m.assignee || 'Unassigned'} | Priority: ${m.priority.toUpperCase()} | Status: ${m.status.toUpperCase()} | Due: ${m.due_date || 'None'}`).join('\n')}
+
+I have filtered the table to show these items and opened "${matchingRecords[0].title}" in the Task Inspector panel. Select an action below to inspect individual records.`;
+    } else if (openedNode && !modifiedNode && !isTaskCreateRequest) {
+      reply = `Inspecting Record
+
+[Reference: Task ${openedNode.id} - "${openedNode.title}"]
+[Reference: Assignee: ${openedNode.assignee || 'Unassigned'} | Priority: ${openedNode.priority.toUpperCase()} | Status: ${openedNode.status.toUpperCase()} | Due: ${openedNode.due_date || 'None'}]
+
+I have navigated to Table View and opened "${openedNode.title}" in the Task Inspector panel on your screen.
+
+Deliverable Details:
+• Title: ${openedNode.title}
+• Assignee: ${openedNode.assignee || 'Unassigned'}
+• Status: ${openedNode.status.toUpperCase()}
+• Priority: ${openedNode.priority.toUpperCase()}
+• Due Date: ${openedNode.due_date || 'None'}
+• Notes: ${openedNode.content || 'None'}
+
+All fields are live-editable in the inspector panel or through the quick actions below.`;
     } else if (modifiedNode && modifiedField) {
       const valStr = typeof modifiedValue === 'string' ? modifiedValue.toUpperCase() : JSON.stringify(modifiedValue);
-      reply = `Updated **${modifiedField.toUpperCase()}** to \`${valStr}\` on **"${modifiedNode.title}"**.\n\nThe project table and database have been updated in real time in the background.`;
+      reply = `Field Updated Successfully
+
+[Reference: Task ${modifiedNode.id} - "${modifiedNode.title}"]
+[Reference: Field Update - ${modifiedField.toUpperCase()} set to ${valStr}]
+
+Updated ${modifiedField.toUpperCase()} to ${valStr} on "${modifiedNode.title}". The project table, board, and database have been updated in real time.`;
     } else if (actions.some((a) => a.type === 'filter_tasks')) {
       const filterAct = actions.find((a) => a.type === 'filter_tasks');
       reply = filterAct?.target
-        ? `Filtered workspace for **"${filterAct.target}"**. Matching tasks are shown in the background view.`
-        : `Filter cleared. All tasks are visible in the background workspace.`;
+        ? `Filtered Workspace Table
+
+[Reference: Table Filter Active - "${filterAct.target}"]
+Matching deliverables are visible in the table view. Select any row to inspect its fields.`
+        : `Table Filter Reset
+
+[Reference: Table Filter Cleared]
+All deliverables are now visible in the workspace table.`;
     } else if (actions.some((a) => a.type === 'delete_task')) {
       const delAct = actions.find((a) => a.type === 'delete_task');
-      reply = `Removed: ${delAct?.label || 'Deleted task from project table'}.`;
+      reply = `Record Removed
+
+[Reference: Deleted Deliverable - ${delAct?.label || 'Removed from table'}]`;
     } else if (actions.length > 0) {
       const actionLabels = actions.map((a) => a.label).filter(Boolean);
       if (actions.some((a) => a.type === 'switch_view' && a.target === 'table')) {
-        reply = `Switched to **Table View**. All records, assignees, and dates are displayed in editable table rows.`;
+        reply = `Switched to Table View
+
+[Reference: View - Table Grid (8 Deliverables)]
+All deliverables, assignees, priorities, and deadlines are displayed in editable table rows.`;
       } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'board')) {
-        reply = `Switched to **Board View** (Kanban). Visual workflow pipeline across Todo, In Progress, Review, and Done.`;
+        reply = `Switched to Kanban Board View
+
+[Reference: View - Board Pipeline (Todo, In Progress, Review, Done)]
+Deliverables are displayed across lifecycle columns with real-time drag-and-drop capability.`;
       } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'mindmap')) {
-        reply = `Switched to **Mind Map View**, displaying task nodes clustered by branch hierarchy.`;
+        reply = `Switched to Mind Map View
+
+[Reference: View - Mind Map Hierarchy]
+Task nodes are clustered by status hierarchy branch.`;
       } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'calendar')) {
-        reply = `Switched to **Calendar View**. Your upcoming deadlines and milestones are scheduled across this week.`;
+        reply = `Switched to Calendar View
+
+[Reference: View - Calendar Schedule]
+Upcoming deadlines and milestones are scheduled across this week.`;
       } else if (actions.some((a) => a.type === 'switch_section' && a.target === 'workflows')) {
-        reply = `Opened **Automation Studio**. You can inspect and toggle event-driven DAG workflow triggers.`;
+        reply = `Opened Automation Studio
+
+[Reference: Section - Event-Driven DAG Workflows]
+You can inspect, configure, and toggle event-driven automations.`;
       } else if (actions.some((a) => a.type === 'switch_section' && a.target === 'agents')) {
-        reply = `Opened **AI Agents Directory**. Review agent profiles, tool assignments, and model tiers.`;
+        reply = `Opened AI Agents Directory
+
+[Reference: Section - AI Team Members & Tool Bindings]
+Inspect agent profiles, model tiers, and assigned capabilities.`;
       } else if (actions.some((a) => a.type === 'switch_workspace')) {
         const wsTarget = actions.find((a) => a.type === 'switch_workspace')?.target;
-        reply = `Switched workspace to **${wsTarget?.toUpperCase()}**. Domain context and projects have been loaded.`;
+        reply = `Switched Workspace
+
+[Reference: Active Domain - ${wsTarget?.toUpperCase()}]
+Domain context and related projects loaded.`;
       } else {
-        reply = `Executed operations: ${actionLabels.join(' • ')}.`;
+        reply = `Executed Operations: ${actionLabels.join(' • ')}.`;
       }
     }
   }
@@ -1119,6 +1174,7 @@ export async function sendTaskadeAgentMessage(input: {
     if (lower.includes('sarah')) assignee = 'Sarah Lin';
     else if (lower.includes('alex')) assignee = 'Alex Rivera';
     else if (lower.includes('marcus')) assignee = 'Marcus Vance';
+    else if (lower.includes('david')) assignee = 'David Chen';
     else if (lower.includes('you') || lower.includes('me')) assignee = 'You';
 
     const newTask: TaskadeNodeRecord = {
@@ -1139,20 +1195,43 @@ export async function sendTaskadeAgentMessage(input: {
       createdTask: newTask,
       taskId: newTask.id,
       taskTitle: newTask.title,
-      label: `Created task "${cleanTitle}"`,
+      label: `Created deliverable "${cleanTitle}"`,
+    });
+    actions.push({
+      type: 'open_task',
+      taskId: newTask.id,
+      taskTitle: newTask.title,
+      field: 'all',
+      label: `Opened "${cleanTitle}" in Task Inspector`,
     });
 
-    const taskMsg = `**New Task Created**: Added **"${cleanTitle}"** with Priority **${newTask.priority.toUpperCase()}**, Assignee **${newTask.assignee}**, and Status **${newTask.status.toUpperCase()}**.`;
+    const taskMsg = `Deliverable Created
+
+[Reference: Task ${newTask.id} - "${cleanTitle}"]
+[Reference: Assignee: ${newTask.assignee} | Priority: ${newTask.priority.toUpperCase()} | Status: ${newTask.status.toUpperCase()}]
+
+Added "${cleanTitle}" to active project table. Opened in Task Inspector panel.`;
     reply = reply ? `${reply}\n\n${taskMsg}` : taskMsg;
   } else if (adaptiveReply) {
     reply = adaptiveReply;
   } else if (!reply) {
-    reply = `I'm analyzing your active project table with **${input.nodes.length}** records. Give me a command like:\n• *"Prepare tomorrow's client meeting"*\n• *"Investigate drop in product usage"*\n• *"Review overdue project work"*\n• *"Set priority to Critical"*\n• *"Switch to Calendar View"*`;
+    reply = `Workspace Intelligence Ready
+
+[Reference: Active Workspace Table - ${input.nodes.length} Records Connected]
+
+Give me a goal or query such as:
+• "Prepare tomorrow's client meeting" (Surfaces Acme Corp executive prep)
+• "Investigate drop in product usage" (Surfaces European gateway diagnostics)
+• "Review overdue project work" (Surfaces Sprint 24 deliverables and blockers)
+• "Show tasks for Sarah Lin" (Filters and inspects Sarah's deliverables)
+• "Open Acme Corp Enterprise Contract Renewal" (Opens task inspector)
+• "Set priority to Critical" (Updates deliverable priority in real time)`;
   }
 
   const generatedOptions = buildContextualOptions({
     nodes: input.nodes,
     openedNode,
+    matchingNodes: matchingRecords,
     modifiedNode,
     createdTask: createdTasks[0],
     actions,
@@ -1175,6 +1254,7 @@ export async function sendTaskadeAgentMessage(input: {
 function buildContextualOptions(params: {
   nodes: TaskadeNodeRecord[];
   openedNode?: TaskadeNodeRecord;
+  matchingNodes?: TaskadeNodeRecord[];
   modifiedNode?: TaskadeNodeRecord;
   createdTask?: TaskadeNodeRecord;
   actions: AgentActionPayload[];
@@ -1184,41 +1264,42 @@ function buildContextualOptions(params: {
   const q = params.query.toLowerCase();
 
   // Hackathon Scenario 1: Meeting Prep
-  if (q.includes('meeting') || q.includes('prepare') || q.includes('acme') || q.includes('meridian')) {
+  if (q.includes('meeting') || q.includes('prepare') || (q.includes('acme') && !q.includes('only acme'))) {
     options.push({
-      id: `opt-brief-${Date.now()}`,
-      label: 'Email Briefing to Sarah Jenkins',
-      icon: 'user',
+      id: `opt-inspect-brief-${Date.now()}`,
+      label: 'Inspect 10:00 AM Meeting Brief',
+      icon: 'inspect',
       action: {
-        type: 'update_field',
-        taskId: 'node-1',
-        field: 'status',
-        value: 'in_progress',
-        label: 'Briefing deck emailed to Sarah Jenkins',
+        type: 'open_task',
+        taskId: 'node-2',
+        taskTitle: 'Prepare Acme Corp 10:00 AM Meeting Brief',
+        field: 'all',
+        label: 'Opened 10:00 AM Meeting Brief in Inspector',
       },
     });
     options.push({
       id: `opt-lock-${Date.now()}`,
-      label: 'Lock SLA Draft 4.2',
+      label: 'Lock SLA Clause 4.2',
       icon: 'check',
       action: {
         type: 'update_field',
         taskId: 'node-1',
+        taskTitle: 'Acme Corp Enterprise Contract Renewal ($120k ARR)',
         field: 'priority',
         value: 'critical',
-        label: 'SLA Clause 4.2 locked & approved',
+        label: 'SLA Clause 4.2 locked and approved',
       },
     });
     options.push({
-      id: `opt-crit-${Date.now()}`,
-      label: 'Set Critical Priority',
-      icon: 'zap',
+      id: `opt-send-addendum-${Date.now()}`,
+      label: 'Inspect Marcus Vance Addendum',
+      icon: 'inspect',
       action: {
-        type: 'update_field',
-        taskId: 'node-1',
-        field: 'priority',
-        value: 'critical',
-        label: 'Elevated contract priority to CRITICAL',
+        type: 'open_task',
+        taskId: 'node-6',
+        taskTitle: 'Send Revised Contract Addendum to Marcus Vance',
+        field: 'all',
+        label: 'Opened Contract Addendum in Inspector',
       },
     });
     options.push({
@@ -1235,45 +1316,47 @@ function buildContextualOptions(params: {
   }
 
   // Hackathon Scenario 2: Usage Drop
-  if (q.includes('usage') || q.includes('drop') || q.includes('smb') || q.includes('why did usage')) {
+  if (q.includes('usage') || q.includes('drop') || q.includes('telemetry') || q.includes('why did usage') || q.includes('anomaly')) {
     options.push({
-      id: `opt-rollback-${Date.now()}`,
-      label: 'Rollback Gateway #491 Throttling',
-      icon: 'zap',
+      id: `opt-inspect-latency-${Date.now()}`,
+      label: 'Inspect Gateway Latency Task',
+      icon: 'inspect',
       action: {
-        type: 'update_field',
-        taskId: 'node-2',
-        field: 'status',
-        value: 'in_progress',
-        label: 'Rollback executed on Gateway Node #491',
+        type: 'open_task',
+        taskId: 'node-8',
+        taskTitle: 'Verify European Gateway Connection Pool Latency',
+        field: 'all',
+        label: 'Opened Gateway Connection Pool Latency in Inspector',
       },
     });
     options.push({
-      id: `opt-notify-${Date.now()}`,
-      label: 'Notify 480 Affected SMB Accounts',
-      icon: 'user',
-      action: {
-        type: 'update_field',
-        taskId: 'node-2',
-        field: 'status',
-        value: 'done',
-        label: 'Broadcast sent to affected accounts',
-      },
-    });
-    options.push({
-      id: `opt-incident-${Date.now()}`,
-      label: 'Create Incident Report #842',
+      id: `opt-inspect-incident-${Date.now()}`,
+      label: 'Inspect Incident Resolution',
       icon: 'check',
       action: {
         type: 'open_task',
-        taskId: 'node-2',
+        taskId: 'node-7',
+        taskTitle: 'Investigate European Region Login Drop (15.2%)',
         field: 'all',
-        label: 'Opened Incident Report #842',
+        label: 'Opened Login Drop Investigation in Inspector',
+      },
+    });
+    options.push({
+      id: `opt-rollback-${Date.now()}`,
+      label: 'Verify Build #491 Fix',
+      icon: 'zap',
+      action: {
+        type: 'update_field',
+        taskId: 'node-8',
+        taskTitle: 'Verify European Gateway Connection Pool Latency',
+        field: 'status',
+        value: 'in_progress',
+        label: 'Build #491 verified with 42ms latency',
       },
     });
     options.push({
       id: `opt-tbl-${Date.now()}`,
-      label: 'Open Segment Table View',
+      label: 'Open Table View',
       icon: 'table',
       action: {
         type: 'switch_view',
@@ -1285,51 +1368,81 @@ function buildContextualOptions(params: {
   }
 
   // Hackathon Scenario 3: Overdue Work
-  if (q.includes('overdue') || q.includes('late') || q.includes('blocker') || q.includes('deadline')) {
+  if (q.includes('overdue') || q.includes('late') || q.includes('blocker') || q.includes('deadline') || q.includes('sprint 24')) {
     options.push({
-      id: `opt-sre-${Date.now()}`,
-      label: 'Reassign Blocker to SRE Team',
+      id: `opt-reassign-sdk-${Date.now()}`,
+      label: 'Reassign API Docs to Alex Rivera',
       icon: 'user',
       action: {
         type: 'update_field',
         taskId: 'node-3',
+        taskTitle: 'Update API Documentation for Client SDK',
         field: 'assignee',
-        value: 'SRE Escalation Team',
-        label: 'Reassigned blocker to SRE Team',
+        value: 'Alex Rivera',
+        label: 'Reassigned API Documentation to Alex Rivera',
       },
     });
     options.push({
-      id: `opt-ext-${Date.now()}`,
-      label: 'Extend Milestone Deadline +48h',
-      icon: 'calendar',
+      id: `opt-inspect-security-${Date.now()}`,
+      label: 'Inspect Security Audit Blocker',
+      icon: 'inspect',
       action: {
-        type: 'update_field',
-        taskId: 'node-3',
-        field: 'due_date',
-        value: 'In 2 days',
-        label: 'Extended milestone deadline +48h',
+        type: 'open_task',
+        taskId: 'node-4',
+        taskTitle: 'Review Security Audit Checklist',
+        field: 'all',
+        label: 'Opened Security Audit Checklist in Inspector',
       },
     });
     options.push({
-      id: `opt-slack-${Date.now()}`,
-      label: 'Ping Owners on Slack',
-      icon: 'zap',
+      id: `opt-inspect-mobile-${Date.now()}`,
+      label: 'Inspect Mobile Release Notes',
+      icon: 'inspect',
       action: {
-        type: 'update_field',
-        taskId: 'node-3',
-        field: 'status',
-        value: 'in_progress',
-        label: 'Alert sent to Priya Sharma & Marcus Vance',
+        type: 'open_task',
+        taskId: 'node-5',
+        taskTitle: 'Finalize Mobile Release Notes',
+        field: 'all',
+        label: 'Opened Mobile Release Notes in Inspector',
       },
     });
     options.push({
-      id: `opt-board-${Date.now()}`,
-      label: 'Open in Kanban Board',
-      icon: 'board',
+      id: `opt-filter-overdue-${Date.now()}`,
+      label: 'Show Overdue in Table View',
+      icon: 'table',
       action: {
-        type: 'switch_view',
-        target: 'board',
-        label: 'Opened Kanban Board',
+        type: 'filter_tasks',
+        target: 'overdue',
+        label: 'Filtered table for Overdue tasks',
+      },
+    });
+    return options.slice(0, 4);
+  }
+
+  // If multiple matching nodes were found, provide buttons to inspect each
+  if (params.matchingNodes && params.matchingNodes.length > 1) {
+    for (const match of params.matchingNodes.slice(0, 3)) {
+      options.push({
+        id: `opt-open-match-${match.id}-${Date.now()}`,
+        label: `Inspect: "${match.title.slice(0, 24)}"`,
+        icon: 'inspect',
+        action: {
+          type: 'open_task',
+          taskId: match.id,
+          taskTitle: match.title,
+          field: 'all',
+          label: `Opened "${match.title}" in Task Inspector`,
+        },
+      });
+    }
+    options.push({
+      id: `opt-clear-${Date.now()}`,
+      label: 'Clear Filter (Show All)',
+      icon: 'filter',
+      action: {
+        type: 'filter_tasks',
+        target: '',
+        label: 'Cleared table filter',
       },
     });
     return options.slice(0, 4);
@@ -1337,7 +1450,7 @@ function buildContextualOptions(params: {
 
   const activeNode = params.modifiedNode || params.openedNode || params.createdTask;
 
-  // 1. Task-specific options when an item was targeted or modified
+  // Task-specific options when an item was targeted or modified
   if (activeNode) {
     if (activeNode.status !== 'done') {
       options.push({
@@ -1358,7 +1471,7 @@ function buildContextualOptions(params: {
     if (activeNode.status !== 'in_progress') {
       options.push({
         id: `opt-prog-${activeNode.id}-${Date.now()}`,
-        label: `Set In Progress`,
+        label: 'Set In Progress',
         icon: 'zap',
         action: {
           type: 'update_field',
@@ -1374,7 +1487,7 @@ function buildContextualOptions(params: {
     if (activeNode.priority !== 'critical') {
       options.push({
         id: `opt-crit-${activeNode.id}-${Date.now()}`,
-        label: `Escalate to Critical`,
+        label: 'Escalate to Critical',
         icon: 'zap',
         action: {
           type: 'update_field',
@@ -1387,136 +1500,9 @@ function buildContextualOptions(params: {
       });
     }
 
-    if (activeNode.assignee !== 'Sarah Lin') {
-      options.push({
-        id: `opt-assign-${activeNode.id}-${Date.now()}`,
-        label: `Assign to Sarah Lin`,
-        icon: 'user',
-        action: {
-          type: 'update_field',
-          taskId: activeNode.id,
-          taskTitle: activeNode.title,
-          field: 'assignee',
-          value: 'Sarah Lin',
-          label: `Assigned "${activeNode.title}" to Sarah Lin`,
-        },
-      });
-    }
-
     options.push({
       id: `opt-cal-${activeNode.id}-${Date.now()}`,
-      label: `Open in Calendar View`,
-      icon: 'calendar',
-      action: {
-        type: 'switch_view',
-        target: 'calendar',
-        label: `Switched to Calendar View`,
-      },
-    });
-
-    return options.slice(0, 4);
-  }
-
-  // 2. Query is about filtering or search
-  if (q.includes('filter') || q.includes('search') || q.includes('show only') || q.includes('find')) {
-    options.push({
-      id: `opt-clear-filter-${Date.now()}`,
-      label: 'Clear Filter (Show All)',
-      icon: 'filter',
-      action: {
-        type: 'filter_tasks',
-        target: '',
-        label: 'Cleared table filter',
-      },
-    });
-    options.push({
-      id: `opt-filter-crit-${Date.now()}`,
-      label: 'Filter: Critical Blockers',
-      icon: 'zap',
-      action: {
-        type: 'filter_tasks',
-        target: 'critical',
-        label: 'Filtered for Critical Blockers',
-      },
-    });
-    options.push({
-      id: `opt-filter-prog-${Date.now()}`,
-      label: 'Filter: In Progress',
-      icon: 'filter',
-      action: {
-        type: 'filter_tasks',
-        target: 'in progress',
-        label: 'Filtered for In Progress Tasks',
-      },
-    });
-    options.push({
-      id: `opt-filter-done-${Date.now()}`,
-      label: 'Filter: Completed Tasks',
-      icon: 'check',
-      action: {
-        type: 'filter_tasks',
-        target: 'done',
-        label: 'Filtered for Completed Tasks',
-      },
-    });
-    return options.slice(0, 4);
-  }
-
-  // 3. Query is about switching to Calendar
-  if (q.includes('calendar') || q.includes('schedule') || q.includes('timeline')) {
-    const criticalNode = params.nodes.find((n) => n.priority === 'critical');
-    options.push({
-      id: `opt-cal-table-${Date.now()}`,
-      label: 'Back to Table View',
-      icon: 'table',
-      action: {
-        type: 'switch_view',
-        target: 'table',
-        label: 'Switched to Table View',
-      },
-    });
-    options.push({
-      id: `opt-cal-board-${Date.now()}`,
-      label: 'Switch to Kanban Board',
-      icon: 'board',
-      action: {
-        type: 'switch_view',
-        target: 'board',
-        label: 'Switched to Board View',
-      },
-    });
-    if (criticalNode) {
-      options.push({
-        id: `opt-cal-crit-${criticalNode.id}-${Date.now()}`,
-        label: `Inspect: "${criticalNode.title.slice(0, 22)}"`,
-        icon: 'inspect',
-        action: {
-          type: 'open_task',
-          taskId: criticalNode.id,
-          taskTitle: criticalNode.title,
-          field: 'all',
-          label: `Opened "${criticalNode.title}"`,
-        },
-      });
-    }
-    options.push({
-      id: `opt-cal-filter-${Date.now()}`,
-      label: 'Filter: In Progress Tasks',
-      icon: 'filter',
-      action: {
-        type: 'filter_tasks',
-        target: 'in progress',
-        label: 'Filtered for In Progress Tasks',
-      },
-    });
-    return options.slice(0, 4);
-  }
-
-  // 4. Query is about Board or Mindmap
-  if (q.includes('board') || q.includes('kanban') || q.includes('mindmap') || q.includes('mind map')) {
-    options.push({
-      id: `opt-nav-cal-${Date.now()}`,
-      label: 'Open Calendar View',
+      label: 'Open in Calendar View',
       icon: 'calendar',
       action: {
         type: 'switch_view',
@@ -1524,39 +1510,19 @@ function buildContextualOptions(params: {
         label: 'Switched to Calendar View',
       },
     });
-    options.push({
-      id: `opt-nav-tbl-${Date.now()}`,
-      label: 'Open Table View',
-      icon: 'table',
-      action: {
-        type: 'switch_view',
-        target: 'table',
-        label: 'Switched to Table View',
-      },
-    });
-    options.push({
-      id: `opt-nav-wf-${Date.now()}`,
-      label: 'Open Automations Studio',
-      icon: 'workflow',
-      action: {
-        type: 'switch_section',
-        target: 'workflows',
-        label: 'Opened Automation Studio',
-      },
-    });
+
     return options.slice(0, 4);
   }
 
-  // 5. Default high-leverage contextual options for any query/prompt
+  // General default fallback options
   const criticalNode = params.nodes.find((n) => n.priority === 'critical');
   const inProgNode = params.nodes.find((n) => n.status === 'in_progress');
-  const todoNode = params.nodes.find((n) => n.status === 'todo');
 
   if (criticalNode) {
     options.push({
       id: `opt-def-crit-${criticalNode.id}-${Date.now()}`,
-      label: `Focus Blocker: "${criticalNode.title.slice(0, 20)}"`,
-      icon: 'zap',
+      label: `Inspect Blocker: "${criticalNode.title.slice(0, 22)}"`,
+      icon: 'inspect',
       action: {
         type: 'open_task',
         taskId: criticalNode.id,
@@ -1566,6 +1532,32 @@ function buildContextualOptions(params: {
       },
     });
   }
+
+  if (inProgNode) {
+    options.push({
+      id: `opt-def-prog-${inProgNode.id}-${Date.now()}`,
+      label: `Inspect: "${inProgNode.title.slice(0, 22)}"`,
+      icon: 'inspect',
+      action: {
+        type: 'open_task',
+        taskId: inProgNode.id,
+        taskTitle: inProgNode.title,
+        field: 'all',
+        label: `Opened "${inProgNode.title}"`,
+      },
+    });
+  }
+
+  options.push({
+    id: `opt-def-table-${Date.now()}`,
+    label: 'Open Table View',
+    icon: 'table',
+    action: {
+      type: 'switch_view',
+      target: 'table',
+      label: 'Switched to Table View',
+    },
+  });
 
   options.push({
     id: `opt-def-cal-${Date.now()}`,
@@ -1577,57 +1569,6 @@ function buildContextualOptions(params: {
       label: 'Switched to Calendar View',
     },
   });
-
-  options.push({
-    id: `opt-def-board-${Date.now()}`,
-    label: 'Open Kanban Board',
-    icon: 'board',
-    action: {
-      type: 'switch_view',
-      target: 'board',
-      label: 'Switched to Board View',
-    },
-  });
-
-  if (inProgNode) {
-    options.push({
-      id: `opt-def-prog-${inProgNode.id}-${Date.now()}`,
-      label: `Inspect In Progress: "${inProgNode.title.slice(0, 20)}"`,
-      icon: 'inspect',
-      action: {
-        type: 'open_task',
-        taskId: inProgNode.id,
-        taskTitle: inProgNode.title,
-        field: 'all',
-        label: `Opened "${inProgNode.title}"`,
-      },
-    });
-  } else if (todoNode) {
-    options.push({
-      id: `opt-def-start-${todoNode.id}-${Date.now()}`,
-      label: `Start: "${todoNode.title.slice(0, 20)}"`,
-      icon: 'zap',
-      action: {
-        type: 'update_field',
-        taskId: todoNode.id,
-        taskTitle: todoNode.title,
-        field: 'status',
-        value: 'in_progress',
-        label: `Marked "${todoNode.title}" In Progress`,
-      },
-    });
-  } else {
-    options.push({
-      id: `opt-def-filter-${Date.now()}`,
-      label: 'Filter: In Progress Tasks',
-      icon: 'filter',
-      action: {
-        type: 'filter_tasks',
-        target: 'in progress',
-        label: 'Filtered for In Progress Tasks',
-      },
-    });
-  }
 
   return options.slice(0, 4);
 }

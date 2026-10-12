@@ -537,20 +537,36 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
       setSelectedTask(null);
     } else if (act.type === 'open_adaptive') {
       onOpenAdaptiveCanvas();
-    } else if (act.type === 'open_task' && act.taskId) {
-      const targetItem = tasks.find((t) => t.id === act.taskId) || fallbackTask;
+    } else if (act.type === 'open_task') {
+      const lookupId = act.taskId?.toLowerCase();
+      const lookupTitle = act.taskTitle?.toLowerCase();
+      const targetItem =
+        (act.taskId ? tasks.find((t) => t.id === act.taskId) : undefined) ||
+        (lookupTitle ? tasks.find((t) => t.title.toLowerCase().includes(lookupTitle) || lookupTitle.includes(t.title.toLowerCase())) : undefined) ||
+        (lookupId ? tasks.find((t) => t.title.toLowerCase().includes(lookupId) || t.id.toLowerCase().includes(lookupId)) : undefined) ||
+        fallbackTask;
       if (targetItem) {
         setSelectedTask(targetItem);
-        setFocusedCell({ taskId: act.taskId, field: act.field || 'all' });
+        setFocusedCell({ taskId: targetItem.id, field: act.field || 'all' });
         setTimeout(() => setFocusedCell(null), 3500);
       }
       setView('table');
       setSection('apps');
-    } else if (act.type === 'update_field' && act.taskId && act.field) {
-      const propField = act.field === 'due_date' ? 'dueDate' : act.field;
-      void updateTaskField(act.taskId, propField as keyof TaskItem, act.value);
-      setFocusedCell({ taskId: act.taskId, field: propField });
-      setTimeout(() => setFocusedCell(null), 3500);
+    } else if (act.type === 'update_field' && act.field) {
+      const lookupTitle = act.taskTitle?.toLowerCase();
+      const lookupId = act.taskId?.toLowerCase();
+      const targetItem =
+        (act.taskId ? tasks.find((t) => t.id === act.taskId) : undefined) ||
+        (lookupTitle ? tasks.find((t) => t.title.toLowerCase().includes(lookupTitle) || lookupTitle.includes(t.title.toLowerCase())) : undefined) ||
+        (lookupId ? tasks.find((t) => t.title.toLowerCase().includes(lookupId) || t.id.toLowerCase().includes(lookupId)) : undefined) ||
+        fallbackTask;
+      const actualId = targetItem ? targetItem.id : act.taskId;
+      if (actualId) {
+        const propField = act.field === 'due_date' ? 'dueDate' : act.field;
+        void updateTaskField(actualId, propField as keyof TaskItem, act.value);
+        setFocusedCell({ taskId: actualId, field: propField });
+        setTimeout(() => setFocusedCell(null), 3500);
+      }
     } else if (act.type === 'delete_task' && act.taskId) {
       void deleteTask(act.taskId);
     } else if (act.type === 'update_task' && act.taskId) {
@@ -559,6 +575,10 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
       setTimeout(() => setFocusedCell(null), 3500);
     } else if (act.type === 'filter_tasks') {
       setSearch(act.target || '');
+      setSection('apps');
+      if (view === 'adaptive') {
+        setView('table');
+      }
     } else if (act.type === 'create_task' && act.createdTask) {
       const item = toTaskItem(act.createdTask);
       setTasks((current) => [item, ...current]);
