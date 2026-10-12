@@ -547,8 +547,6 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
         setFocusedCell({ taskId: targetItem.id, field: act.field || 'all' });
         setTimeout(() => setFocusedCell(null), 3500);
       }
-      setView('table');
-      setSection('apps');
     } else if (act.type === 'update_field' && act.field) {
       const lookupTitle = act.taskTitle?.toLowerCase();
       const lookupId = act.taskId?.toLowerCase();

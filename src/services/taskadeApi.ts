@@ -674,16 +674,47 @@ export async function sendTaskadeAgentMessage(input: {
     return input.nodes.find((n) => n.title.toLowerCase() === q || n.id.toLowerCase() === q);
   };
 
-  // 1. Detect View / Tab Navigation
-  const isCalendarQuery = lower.includes('calendar') || lower.includes('schedule');
-  const isTableQuery = lower.includes('table') || lower.includes('spreadsheet') || lower.includes('tabular') || lower.includes('grid');
-  const isBoardQuery = lower.includes('board') || lower.includes('kanban');
-  const isMindmapQuery = lower.includes('mindmap') || lower.includes('mind map') || lower.includes('flowchart') || lower.includes('node graph');
-  const isListQuery = lower.includes('list view') || lower.includes('checklist') || lower.includes('bullet list');
+  // 1. Detect View / Tab Navigation (Only when explicitly commanded)
+  const isCalendarQuery =
+    lower === 'calendar' ||
+    lower.includes('calendar view') ||
+    lower.includes('show calendar') ||
+    lower.includes('open calendar') ||
+    lower.includes('switch to calendar') ||
+    lower.includes('view calendar');
+
+  const isTableQuery =
+    lower === 'table' ||
+    lower.includes('table view') ||
+    lower.includes('show table') ||
+    lower.includes('open table') ||
+    lower.includes('switch to table') ||
+    lower.includes('spreadsheet view');
+
+  const isBoardQuery =
+    lower === 'board' ||
+    lower.includes('board view') ||
+    lower.includes('show board') ||
+    lower.includes('open board') ||
+    lower.includes('switch to board') ||
+    lower.includes('kanban');
+
+  const isMindmapQuery =
+    lower === 'mindmap' ||
+    lower.includes('mind map') ||
+    lower.includes('mindmap view') ||
+    lower.includes('flowchart view') ||
+    lower.includes('node graph');
+
+  const isListQuery =
+    lower === 'list' ||
+    lower.includes('list view') ||
+    lower.includes('show list') ||
+    lower.includes('bullet list');
 
   if (isCalendarQuery) {
     actions.push({ type: 'switch_view', target: 'calendar', label: 'Switched to Calendar View' });
-  } else if (isTableQuery && !lower.includes('task') && !input.nodes.some((n) => lower.includes(n.title.toLowerCase()))) {
+  } else if (isTableQuery) {
     actions.push({ type: 'switch_view', target: 'table', label: 'Switched to Table View' });
   } else if (isBoardQuery) {
     actions.push({ type: 'switch_view', target: 'board', label: 'Switched to Board View' });
@@ -712,9 +743,30 @@ export async function sendTaskadeAgentMessage(input: {
   }
 
   // 4. Detect Adaptive Canvas & 3 Hackathon Intent Scenarios
-  const isMeetingPrep = lower.includes('meeting') || lower.includes('client meeting') || lower.includes('prepare') || (lower.includes('acme') && !lower.includes('only acme') && !lower.includes('open acme'));
-  const isUsageDrop = lower.includes('usage') || lower.includes('drop in') || lower.includes('why did usage') || lower.includes('anomaly') || (lower.includes('drop') && !lower.includes('dropdown'));
-  const isOverdueWork = (lower.includes('overdue') && !lower.includes('filter overdue')) || lower.includes('blocker') || lower.includes('deadline') || lower.includes('late tasks');
+  const isMeetingPrep =
+    lower.includes('meeting') ||
+    lower.includes('client meeting') ||
+    lower.includes('prepare meeting') ||
+    lower.includes('meeting prep') ||
+    lower.includes('acme renewal') ||
+    lower.includes('contract renewal');
+
+  const isUsageDrop =
+    lower.includes('usage drop') ||
+    lower.includes('drop in usage') ||
+    lower.includes('why did usage drop') ||
+    lower.includes('drop in product usage') ||
+    lower.includes('usage anomaly') ||
+    lower.includes('login drop');
+
+  const isOverdueWork =
+    lower.includes('overdue') ||
+    lower.includes('overdue work') ||
+    lower.includes('overdue tasks') ||
+    lower.includes('review overdue') ||
+    lower.includes('late tasks') ||
+    lower.includes('blockers');
+
   const isAdaptiveQuery = lower.includes('adaptive') || lower.includes('canvas') || lower.includes('deck') || lower.includes('prism view');
 
   let adaptiveReply = '';
@@ -778,8 +830,8 @@ The Adaptive Deck panel has highlighted overdue deliverables and team allocation
     actions.push({ type: 'open_adaptive', label: 'Opened PRISM Adaptive Canvas' });
   }
 
-  // 5. Detect "Open / View / Inspect" or direct search for tasks
-  const isViewOnlyNavigation = isCalendarQuery || isBoardQuery || isMindmapQuery || isListQuery || (isTableQuery && !lower.includes('task'));
+  // 5. Detect explicit "Open / Inspect" task commands or matching records
+  const isViewOnlyNavigation = isCalendarQuery || isBoardQuery || isMindmapQuery || isListQuery || isTableQuery;
 
   let openedNode: TaskadeNodeRecord | undefined;
   let matchingRecords: TaskadeNodeRecord[] = [];
@@ -792,39 +844,23 @@ The Adaptive Deck panel has highlighted overdue deliverables and team allocation
     matchingRecords = findMatchingNodes(targetQuery || lower);
 
     const isOpenExplicit =
-      lower.startsWith('open ') ||
-      lower.startsWith('inspect ') ||
-      lower.startsWith('show ') ||
-      lower.includes('open task') ||
-      lower.includes('inspect task');
+      lower.startsWith('open task') ||
+      lower.startsWith('inspect task') ||
+      lower.startsWith('open deliverable') ||
+      lower.startsWith('inspect deliverable') ||
+      lower.includes('open node-') ||
+      lower.includes('inspect node-') ||
+      (lower.startsWith('open ') && !lower.includes('table') && !lower.includes('board') && !lower.includes('calendar') && !lower.includes('mindmap')) ||
+      (lower.startsWith('inspect ') && !lower.includes('table'));
 
-    if (matchingRecords.length === 1 || (matchingRecords.length > 0 && isOpenExplicit)) {
+    if (isOpenExplicit && matchingRecords.length > 0) {
       openedNode = matchingRecords[0];
-      if (!actions.some((a) => a.type === 'switch_view')) {
-        actions.push({ type: 'switch_view', target: 'table', label: 'Switched to Table View' });
-      }
       actions.push({
         type: 'open_task',
         taskId: openedNode.id,
         taskTitle: openedNode.title,
         field: 'all',
         label: `Opened "${openedNode.title}" in Task Inspector`,
-      });
-    } else if (matchingRecords.length > 1 && !isMeetingPrep && !isUsageDrop && !isOverdueWork) {
-      const filterTarget = targetQuery || lower;
-      actions.push({
-        type: 'filter_tasks',
-        target: filterTarget,
-        label: `Filtered workspace table for "${filterTarget}"`,
-      });
-      actions.push({ type: 'switch_view', target: 'table', label: 'Switched to Table View' });
-      openedNode = matchingRecords[0];
-      actions.push({
-        type: 'open_task',
-        taskId: openedNode.id,
-        taskTitle: openedNode.title,
-        field: 'all',
-        label: `Focused "${openedNode.title}" in Task Inspector`,
       });
     }
   }
@@ -1055,23 +1091,13 @@ All items are synchronized across the table, board, and calendar views. Select a
   let createdTasks: TaskadeNodeRecord[] = [];
 
   if (!reply) {
-    if (matchingRecords.length > 1 && !isMeetingPrep && !isUsageDrop && !isOverdueWork) {
-      reply = `Matching Workspace Records
-
-[Reference: Search Query - "${input.message}"]
-[Reference: Matched Deliverables - ${matchingRecords.length} Items Found]
-
-Found ${matchingRecords.length} matching deliverables:
-${matchingRecords.map((m) => `• [Reference: Task ${m.id}] "${m.title}" | Assignee: ${m.assignee || 'Unassigned'} | Priority: ${m.priority.toUpperCase()} | Status: ${m.status.toUpperCase()} | Due: ${m.due_date || 'None'}`).join('\n')}
-
-I have filtered the table to show these items and opened "${matchingRecords[0].title}" in the Task Inspector panel. Select an action below to inspect individual records.`;
-    } else if (openedNode && !modifiedNode && !isTaskCreateRequest) {
-      reply = `Inspecting Record
+    if (openedNode && !modifiedNode && !isTaskCreateRequest) {
+      reply = `Task Inspector Active
 
 [Reference: Task ${openedNode.id} - "${openedNode.title}"]
 [Reference: Assignee: ${openedNode.assignee || 'Unassigned'} | Priority: ${openedNode.priority.toUpperCase()} | Status: ${openedNode.status.toUpperCase()} | Due: ${openedNode.due_date || 'None'}]
 
-I have navigated to Table View and opened "${openedNode.title}" in the Task Inspector panel on your screen.
+Opened "${openedNode.title}" in the Task Inspector panel.
 
 Deliverable Details:
 • Title: ${openedNode.title}
@@ -1081,7 +1107,17 @@ Deliverable Details:
 • Due Date: ${openedNode.due_date || 'None'}
 • Notes: ${openedNode.content || 'None'}
 
-All fields are live-editable in the inspector panel or through the quick actions below.`;
+All fields can be edited directly in the inspector or updated through chat commands.`;
+    } else if (matchingRecords.length > 0 && !isMeetingPrep && !isUsageDrop && !isOverdueWork) {
+      reply = `Matching Workspace Records
+
+[Reference: Query - "${input.message}"]
+[Reference: Matching Deliverables - ${matchingRecords.length} Items Found]
+
+Found ${matchingRecords.length} matching deliverable${matchingRecords.length > 1 ? 's' : ''}:
+${matchingRecords.map((m) => `• [Reference: Task ${m.id}] "${m.title}" | Assignee: ${m.assignee || 'Unassigned'} | Priority: ${m.priority.toUpperCase()} | Status: ${m.status.toUpperCase()} | Due: ${m.due_date || 'None'}`).join('\n')}
+
+Select an action below to inspect individual records, update priorities, or view them across your workspace.`;
     } else if (modifiedNode && modifiedField) {
       const valStr = typeof modifiedValue === 'string' ? modifiedValue.toUpperCase() : JSON.stringify(modifiedValue);
       reply = `Field Updated Successfully
@@ -1414,12 +1450,12 @@ function buildContextualOptions(params: {
     return options.slice(0, 4);
   }
 
-  // If multiple matching nodes were found, provide buttons to inspect each
-  if (params.matchingNodes && params.matchingNodes.length > 1) {
+  // If matching nodes were found, provide buttons to inspect each
+  if (params.matchingNodes && params.matchingNodes.length > 0) {
     for (const match of params.matchingNodes.slice(0, 3)) {
       options.push({
         id: `opt-open-match-${match.id}-${Date.now()}`,
-        label: `Inspect: "${match.title.slice(0, 24)}"`,
+        label: `Inspect "${match.title.length > 24 ? match.title.slice(0, 22) + '...' : match.title}"`,
         icon: 'inspect',
         action: {
           type: 'open_task',
@@ -1430,16 +1466,45 @@ function buildContextualOptions(params: {
         },
       });
     }
-    options.push({
-      id: `opt-clear-${Date.now()}`,
-      label: 'Clear Filter (Show All)',
-      icon: 'filter',
-      action: {
-        type: 'filter_tasks',
-        target: '',
-        label: 'Cleared table filter',
-      },
-    });
+    if (params.matchingNodes.length === 1) {
+      const match = params.matchingNodes[0];
+      if (match.status !== 'done') {
+        options.push({
+          id: `opt-done-${match.id}-${Date.now()}`,
+          label: 'Mark as Done',
+          icon: 'check',
+          action: {
+            type: 'update_field',
+            taskId: match.id,
+            taskTitle: match.title,
+            field: 'status',
+            value: 'done',
+            label: `Marked "${match.title}" Done`,
+          },
+        });
+      }
+      options.push({
+        id: `opt-board-${Date.now()}`,
+        label: 'View in Board',
+        icon: 'board',
+        action: {
+          type: 'switch_view',
+          target: 'board',
+          label: 'Switched to Board View',
+        },
+      });
+    } else {
+      options.push({
+        id: `opt-board-${Date.now()}`,
+        label: 'View in Board',
+        icon: 'board',
+        action: {
+          type: 'switch_view',
+          target: 'board',
+          label: 'Switched to Board View',
+        },
+      });
+    }
     return options.slice(0, 4);
   }
 

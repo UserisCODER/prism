@@ -72,7 +72,7 @@ export const AdaptiveDeck: React.FC<AdaptiveDeckProps> = ({
     if (q === 'meeting' || q === 'prepare meeting' || q === 'check clients') {
       setClarifyingQuestion('Which client meeting would you like to prepare for?');
       setClarifyingOptions([
-        'Meridian Labs / Acme Enterprise',
+        'Acme Corp ($120k ARR, 150 Seats)',
         'Vertex Systems',
         'Northwind Analytics',
       ]);
@@ -81,7 +81,7 @@ export const AdaptiveDeck: React.FC<AdaptiveDeckProps> = ({
 
     setClarifyingQuestion(null);
 
-    if (q.includes('meeting') || q.includes('acme') || q.includes('client') || q.includes('meridian') || q.includes('prepare')) {
+    if (q.includes('meeting') || q.includes('acme') || q.includes('client') || q.includes('prepare')) {
       setActiveScenario('meeting_prep');
       showToast('Workspace dynamically adapted for: Client Meeting Prep');
     } else if (q.includes('usage') || q.includes('drop') || q.includes('drop in') || q.includes('smb') || q.includes('why did usage')) {
@@ -102,7 +102,7 @@ export const AdaptiveDeck: React.FC<AdaptiveDeckProps> = ({
 
   const selectClarification = (option: string) => {
     setClarifyingQuestion(null);
-    if (option.includes('Meridian') || option.includes('Acme')) {
+    if (option.includes('Acme')) {
       setActiveScenario('meeting_prep');
       showToast(`Clarified intent: Preparing meeting for ${option}`);
     } else {
@@ -295,7 +295,7 @@ export const AdaptiveDeck: React.FC<AdaptiveDeckProps> = ({
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-semibold uppercase">Account Owner</span>
-                    <p className="text-sm font-semibold text-slate-800">Priya Sharma</p>
+                    <p className="text-sm font-semibold text-slate-800">Sarah Lin</p>
                   </div>
                   <div>
                     <span className="text-[11px] text-slate-400 font-semibold uppercase">Renewal Date</span>
