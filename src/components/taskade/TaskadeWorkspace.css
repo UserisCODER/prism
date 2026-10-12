@@ -2968,22 +2968,9 @@
   pointer-events: none;
 }
 
+/* Zero Blur Backdrop - Keeps Workspace 100% Crisp & Visible */
 .td-drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  background: rgba(15, 17, 23, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  border: none;
-  cursor: pointer;
-  pointer-events: auto;
-  animation: tdDrawerFadeIn 0.22s ease-out;
-}
-
-@keyframes tdDrawerFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  display: none;
 }
 
 @keyframes tdDrawerSlideIn {
@@ -2991,20 +2978,118 @@
   to { transform: translateX(0); }
 }
 
+/* Hackathon Quick Intent Banner */
+.td-hackathon-quick-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.td-quick-banner-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+
+.td-quick-scenarios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.td-quick-sc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+}
+
+.td-quick-sc-btn:hover {
+  background: #ffffff;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.td-quick-sc-btn.is-active {
+  background: #6d58d7;
+  border-color: #6d58d7;
+  color: #ffffff;
+  box-shadow: 0 1px 4px rgba(109, 88, 215, 0.25);
+}
+
+@keyframes tdDrawerPopIn {
+  from { opacity: 0; transform: scale(0.95) translateY(12px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* AI Drawer - Side-by-Side Docked (Default) */
 .td-agent-drawer {
-  position: relative;
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
   z-index: 1001;
   display: flex;
   flex-direction: column;
-  width: 480px;
+  width: 430px;
   max-width: 95vw;
   height: 100vh;
   background: #ffffff;
-  border-left: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: -16px 0 48px rgba(15, 17, 23, 0.18);
+  border-left: 1px solid #e2e8f0;
+  box-shadow: -6px 0 24px rgba(15, 23, 42, 0.08);
   pointer-events: auto;
-  animation: tdDrawerSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: tdDrawerSlideIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+  transition: width 0.2s ease, height 0.2s ease, border-radius 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* AI Drawer - Floating Companion Mode */
+.td-agent-drawer.is-floating {
+  top: auto;
+  bottom: 24px;
+  right: 24px;
+  width: 410px;
+  max-width: calc(100vw - 48px);
+  height: 580px;
+  max-height: calc(100vh - 48px);
+  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.16);
+  animation: tdDrawerPopIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Docked Split View: Workspace contracts smoothly alongside AI */
+.taskade-shell.has-agent-open.is-docked .td-main {
+  width: calc(100% - 252px - 430px);
+  margin-right: 430px;
+  transition: width 0.22s cubic-bezier(0.16, 1, 0.3, 1), margin-right 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 1200px) {
+  .taskade-shell.has-agent-open.is-docked .td-main {
+    width: calc(100% - 252px);
+    margin-right: 0;
+  }
 }
 
 .td-agent-drawer header {

@@ -15,6 +15,7 @@ import {
   Eye,
   Filter,
   GitBranch,
+  Layers,
   LayoutGrid,
   List,
   Menu,
@@ -25,10 +26,12 @@ import {
   Send,
   Settings2,
   Share2,
+  ShieldAlert,
   Sparkles,
   Table2,
   Tag,
   Trash2,
+  TrendingDown,
   Users,
   Workflow,
   X,
@@ -57,9 +60,10 @@ import {
 } from '../../services/taskadeApi';
 import './TaskadeWorkspace.css';
 import { TaskDetailInspector } from './TaskDetailInspector';
+import { AdaptiveDeck, AdaptiveScenarioId } from './AdaptiveDeck';
 
 type MainSection = 'apps' | 'agents' | 'workflows';
-type ProjectView = 'list' | 'board' | 'mindmap' | 'table' | 'calendar';
+type ProjectView = 'list' | 'board' | 'mindmap' | 'table' | 'calendar' | 'adaptive';
 type TaskStatus = TaskadeStatus;
 type TaskPriority = TaskadePriority;
 
@@ -126,11 +130,12 @@ const statusLabels: Record<TaskStatus, string> = {
 const statusOrder: TaskStatus[] = ['todo', 'in_progress', 'review', 'done'];
 
 const viewOptions: { id: ProjectView; label: string; icon: typeof List }[] = [
-  { id: 'list', label: 'List', icon: List },
+  { id: 'adaptive', label: 'Adaptive Deck', icon: Sparkles },
   { id: 'board', label: 'Board', icon: LayoutGrid },
-  { id: 'mindmap', label: 'Mind map', icon: GitBranch },
   { id: 'table', label: 'Table', icon: Table2 },
   { id: 'calendar', label: 'Calendar', icon: CalendarDays },
+  { id: 'mindmap', label: 'Mind map', icon: GitBranch },
+  { id: 'list', label: 'List', icon: List },
 ];
 
 function formatDueDate(value?: string | null): string {
@@ -212,7 +217,9 @@ const TaskadeLogo: React.FC = () => (
 
 export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdaptiveCanvas }) => {
   const [section, setSection] = useState<MainSection>('apps');
-  const [view, setView] = useState<ProjectView>('board');
+  const [view, setView] = useState<ProjectView>('adaptive');
+  const [activeScenario, setActiveScenario] = useState<AdaptiveScenarioId>('meeting_prep');
+  const [drawerMode, setDrawerMode] = useState<'docked' | 'floating'>('docked');
   const [workspaceList, setWorkspaceList] = useState<TaskadeWorkspaceRecord[]>([]);
   const [activeWorkspace, setActiveWorkspace] = useState<TaskadeWorkspaceRecord | null>(null);
   const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
@@ -512,6 +519,11 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
       if (matchedWs) {
         void selectWorkspace(matchedWs);
       }
+    } else if (act.type === 'adapt_scenario' && act.target) {
+      setActiveScenario(act.target as AdaptiveScenarioId);
+      setView('adaptive');
+      setSection('apps');
+      setSelectedTask(null);
     } else if (act.type === 'open_adaptive') {
       onOpenAdaptiveCanvas();
     } else if (act.type === 'open_task' && act.taskId) {
@@ -658,7 +670,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
   };
 
   return (
-    <div className="taskade-shell">
+    <div className={`taskade-shell ${chatAgent ? `has-agent-open is-${drawerMode}` : ''}`}>
       {mobileNavOpen && (
         <button
           type="button"
@@ -875,6 +887,8 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               search={search}
               selectedTaskId={selectedTask?.id ?? null}
               focusedCell={focusedCell}
+              activeScenario={activeScenario}
+              onSelectScenario={setActiveScenario}
               onViewChange={setView}
               onToggleTask={toggleTask}
               onAddTask={openCreate}
@@ -882,6 +896,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               onUpdateField={updateTaskField}
               onDeleteTask={deleteTask}
               onOpenAdaptiveCanvas={onOpenAdaptiveCanvas}
+              onOpenAgentChat={openAgentChat}
             />
           )}
           {section === 'agents' && (
@@ -922,6 +937,8 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
           messages={chatMessages}
           input={chatInput}
           isSending={isSendingMessage}
+          drawerMode={drawerMode}
+          onToggleDrawerMode={() => setDrawerMode((m) => (m === 'docked' ? 'floating' : 'docked'))}
           onInputChange={setChatInput}
           onSend={sendMessage}
           onSelectOption={handleSelectOption}
@@ -988,6 +1005,8 @@ interface AppsSectionProps {
   search: string;
   selectedTaskId: string | null;
   focusedCell: { taskId: string; field: string } | null;
+  activeScenario: AdaptiveScenarioId;
+  onSelectScenario: (scenario: AdaptiveScenarioId) => void;
   onViewChange: (view: ProjectView) => void;
   onToggleTask: (taskId: string) => void;
   onAddTask: () => void;
@@ -995,6 +1014,7 @@ interface AppsSectionProps {
   onUpdateField: (taskId: string, field: keyof TaskItem, value: any) => void;
   onDeleteTask: (taskId: string) => void;
   onOpenAdaptiveCanvas: () => void;
+  onOpenAgentChat?: (name: string) => void;
 }
 
 const AppsSection: React.FC<AppsSectionProps> = ({
@@ -1004,6 +1024,8 @@ const AppsSection: React.FC<AppsSectionProps> = ({
   search,
   selectedTaskId,
   focusedCell,
+  activeScenario,
+  onSelectScenario,
   onViewChange,
   onToggleTask,
   onAddTask,
@@ -1011,6 +1033,7 @@ const AppsSection: React.FC<AppsSectionProps> = ({
   onUpdateField,
   onDeleteTask,
   onOpenAdaptiveCanvas,
+  onOpenAgentChat,
 }) => {
   const completed = tasks.filter((task) => task.status === 'done').length;
 
@@ -1040,6 +1063,55 @@ const AppsSection: React.FC<AppsSectionProps> = ({
         <span className="td-meta-divider" />
         <span><Check size={14} /> {completed} of {tasks.length} complete</span>
         <button type="button" className="td-more-button" aria-label="Project options"><MoreHorizontal size={18} /></button>
+      </div>
+
+      {/* Hackathon Intent Adaptation Bar */}
+      <div className="td-hackathon-quick-banner">
+        <span className="td-quick-banner-label">
+          <Sparkles size={13} /> Adaptive Intent:
+        </span>
+        <div className="td-quick-scenarios">
+          <button
+            type="button"
+            className={`td-quick-sc-btn ${view === 'adaptive' && activeScenario === 'meeting_prep' ? 'is-active' : ''}`}
+            onClick={() => {
+              onSelectScenario('meeting_prep');
+              onViewChange('adaptive');
+            }}
+          >
+            <span>🤝 Client Meeting</span>
+          </button>
+          <button
+            type="button"
+            className={`td-quick-sc-btn ${view === 'adaptive' && activeScenario === 'usage_drop' ? 'is-active' : ''}`}
+            onClick={() => {
+              onSelectScenario('usage_drop');
+              onViewChange('adaptive');
+            }}
+          >
+            <span>📉 Usage Drop</span>
+          </button>
+          <button
+            type="button"
+            className={`td-quick-sc-btn ${view === 'adaptive' && activeScenario === 'overdue_work' ? 'is-active' : ''}`}
+            onClick={() => {
+              onSelectScenario('overdue_work');
+              onViewChange('adaptive');
+            }}
+          >
+            <span>⏱️ Overdue Work</span>
+          </button>
+          <button
+            type="button"
+            className={`td-quick-sc-btn ${view === 'adaptive' && activeScenario === 'generic' ? 'is-active' : ''}`}
+            onClick={() => {
+              onSelectScenario('generic');
+              onViewChange('adaptive');
+            }}
+          >
+            <span>📊 Generic Baseline</span>
+          </button>
+        </div>
       </div>
 
       <div className="td-view-toolbar">
@@ -1076,13 +1148,16 @@ const AppsSection: React.FC<AppsSectionProps> = ({
         <ProjectViewContent
           tasks={tasks}
           view={view}
+          activeScenario={activeScenario}
           selectedTaskId={selectedTaskId}
           focusedCell={focusedCell}
+          onViewChange={onViewChange}
           onToggleTask={onToggleTask}
           onAddTask={onAddTask}
           onOpenTask={onOpenTask}
           onUpdateField={onUpdateField}
           onDeleteTask={onDeleteTask}
+          onOpenAgentChat={onOpenAgentChat}
         />
       )}
 
@@ -1096,26 +1171,43 @@ const AppsSection: React.FC<AppsSectionProps> = ({
 interface ProjectViewContentProps {
   tasks: TaskItem[];
   view: ProjectView;
+  activeScenario: AdaptiveScenarioId;
   selectedTaskId: string | null;
   focusedCell: { taskId: string; field: string } | null;
+  onViewChange: (view: ProjectView) => void;
   onToggleTask: (taskId: string) => void;
   onAddTask: () => void;
   onOpenTask: (task: TaskItem) => void;
   onUpdateField: (taskId: string, field: keyof TaskItem, value: any) => void;
   onDeleteTask: (taskId: string) => void;
+  onOpenAgentChat?: (name: string) => void;
 }
 
 const ProjectViewContent: React.FC<ProjectViewContentProps> = ({
   tasks,
   view,
+  activeScenario,
   selectedTaskId,
   focusedCell,
+  onViewChange,
   onToggleTask,
   onAddTask,
   onOpenTask,
   onUpdateField,
   onDeleteTask,
+  onOpenAgentChat,
 }) => {
+  if (view === 'adaptive') {
+    return (
+      <AdaptiveDeck
+        initialScenario={activeScenario}
+        onSwitchView={onViewChange}
+        onOpenAgentChat={() => {
+          if (onOpenAgentChat) onOpenAgentChat('Prism AI');
+        }}
+      />
+    );
+  }
   if (view === 'list') {
     return (
       <div className="td-list-view">
@@ -1683,6 +1775,8 @@ interface AgentDrawerProps {
   messages: ChatMessage[];
   input: string;
   isSending: boolean;
+  drawerMode?: 'docked' | 'floating';
+  onToggleDrawerMode?: () => void;
   onInputChange: (value: string) => void;
   onSend: (event: React.FormEvent<HTMLFormElement>) => void;
   onSwitchView: (view: ProjectView) => void;
@@ -1705,6 +1799,8 @@ const AgentDrawer: React.FC<AgentDrawerProps> = ({
   messages,
   input,
   isSending,
+  drawerMode = 'docked',
+  onToggleDrawerMode,
   onInputChange,
   onSend,
   onSwitchView,
@@ -1749,7 +1845,7 @@ const AgentDrawer: React.FC<AgentDrawerProps> = ({
         aria-label="Close assistant"
         onClick={onClose}
       />
-      <aside className="td-agent-drawer" aria-label={`${agentName} panel`}>
+      <aside className={`td-agent-drawer ${drawerMode === 'floating' ? 'is-floating' : ''}`} aria-label={`${agentName} panel`}>
         {/* Drawer Header */}
         <header className="td-agent-header">
           <div className="td-agent-identity">
@@ -1763,14 +1859,27 @@ const AgentDrawer: React.FC<AgentDrawerProps> = ({
               </small>
             </div>
           </div>
-          <button
-            type="button"
-            className="td-icon-button"
-            aria-label="Close assistant"
-            onClick={onClose}
-          >
-            <X size={18} />
-          </button>
+          <div className="td-agent-header-actions">
+            {onToggleDrawerMode && (
+              <button
+                type="button"
+                className="td-icon-button"
+                title={drawerMode === 'floating' ? 'Dock side-by-side' : 'Float window'}
+                aria-label="Toggle drawer layout"
+                onClick={onToggleDrawerMode}
+              >
+                <Layers size={15} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="td-icon-button"
+              aria-label="Close assistant"
+              onClick={onClose}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </header>
 
         {/* Live Context & Workspace Subheader */}
@@ -1806,6 +1915,14 @@ const AgentDrawer: React.FC<AgentDrawerProps> = ({
 
         {/* Quick Tab & Workspace Navigation Toolbar */}
         <div className="td-drawer-quick-tabs" aria-label="Views">
+          <button
+            type="button"
+            onClick={() => onSwitchView('adaptive')}
+            className={`td-drawer-tab-btn ${activeSection === 'apps' && activeView === 'adaptive' ? 'is-active' : ''}`}
+            title="Switch to Adaptive Deck"
+          >
+            <Sparkles size={13} /> Adaptive
+          </button>
           <button
             type="button"
             onClick={() => onSwitchView('calendar')}
@@ -1856,15 +1973,29 @@ const AgentDrawer: React.FC<AgentDrawerProps> = ({
             </div>
             <h2>How can I help with your workspace?</h2>
             <p>
-              Ask me to open records, modify priorities, assign teammates, update statuses, or switch views.
+              Ask me to prepare a client meeting, investigate drops in usage, review overdue work, or update task details.
             </p>
             <div className="td-prompt-chips">
               <button
                 type="button"
-                onClick={() => onInputChange('Switch to Calendar view')}
+                onClick={() => onInputChange('I need to prepare tomorrow’s client meeting')}
               >
-                <CalendarDays size={13} />
-                <span>Switch to Calendar</span>
+                <Sparkles size={13} />
+                <span>Prepare Client Meeting</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onInputChange('Investigate the drop in product usage this week')}
+              >
+                <TrendingDown size={13} />
+                <span>Investigate Usage Drop</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onInputChange('Review overdue project work and blockers')}
+              >
+                <Clock3 size={13} />
+                <span>Review Overdue Work</span>
               </button>
               <button
                 type="button"

@@ -398,7 +398,8 @@ export interface AgentActionPayload {
     | 'create_task'
     | 'delete_task'
     | 'filter_tasks'
-    | 'open_adaptive';
+    | 'open_adaptive'
+    | 'adapt_scenario';
   target?: string;
   label?: string;
   taskId?: string;
@@ -505,8 +506,28 @@ export async function sendTaskadeAgentMessage(input: {
     actions.push({ type: 'switch_workspace', target: 'salesforce', label: 'Switched to Salesforce CRM Workspace' });
   }
 
-  // 4. Detect Adaptive Canvas
-  if (lower.includes('adaptive') || lower.includes('canvas') || lower.includes('prism view') || lower.includes('prism canvas')) {
+  // 4. Detect Adaptive Canvas & 3 Hackathon Intent Scenarios
+  const isMeetingPrep = lower.includes('meeting') || lower.includes('client meeting') || lower.includes('prepare') || lower.includes('acme') || lower.includes('meridian');
+  const isUsageDrop = lower.includes('usage') || lower.includes('drop in') || lower.includes('smb') || lower.includes('why did usage') || lower.includes('anomaly');
+  const isOverdueWork = lower.includes('overdue') || lower.includes('late') || lower.includes('blocker') || lower.includes('deadline');
+  const isAdaptiveQuery = lower.includes('adaptive') || lower.includes('canvas') || lower.includes('prism view') || lower.includes('prism canvas');
+
+  let adaptiveReply = '';
+  let reply = '';
+
+  if (isMeetingPrep) {
+    actions.push({ type: 'adapt_scenario', target: 'meeting_prep', label: 'Adapted workspace for Client Meeting Prep' });
+    actions.push({ type: 'switch_view', target: 'adaptive', label: 'Opened Adaptive Deck' });
+    adaptiveReply = `### 🤝 Client Meeting Prep Mode Active\n**Goal**: Prepare tomorrow's client meeting with **Meridian Labs / Acme Enterprise**.\n\n* **Why Surfaced**: Calendar invite scheduled for tomorrow at 11:30 AM. Contract renegotiation threshold triggered by **+34% token throughput spike**.\n* **Surfaced Components**: Client Overview ($1.42M ARR, 68 Health), Stakeholder Sentiments (Sarah Jenkins, Marcus Vance, Elena Rostova), Agenda Brief, and Recent Comms.\n\nThe adaptive workspace on your left has reorganized itself for this meeting. Select any one-click action below to proceed:`;
+  } else if (isUsageDrop) {
+    actions.push({ type: 'adapt_scenario', target: 'usage_drop', label: 'Adapted workspace for Usage Drop Diagnostic' });
+    actions.push({ type: 'switch_view', target: 'adaptive', label: 'Opened Adaptive Deck' });
+    adaptiveReply = `### 📉 Usage Drop Diagnostic Mode Active\n**Goal**: Investigate **-34% usage drop** across SMB segment in Week 38.\n\n* **Why Surfaced**: Automatic anomaly detector flagged sudden active user drop between Thursday and Saturday.\n* **Surfaced Components**: Anomaly Callout Alert, Telemetry Spline Stream, Cohort Segment Breakdown, and Gateway Root Cause Trace.\n\nThe workspace on your left has reorganized into diagnostic mode. Select an action below:`;
+  } else if (isOverdueWork) {
+    actions.push({ type: 'adapt_scenario', target: 'overdue_work', label: 'Adapted workspace for Overdue Project Work' });
+    actions.push({ type: 'switch_view', target: 'adaptive', label: 'Opened Adaptive Deck' });
+    adaptiveReply = `### ⚠️ Overdue Project Work Mode Active\n**Goal**: Review 5 overdue deliverables and critical blockers risking Q3 milestones.\n\n* **Why Surfaced**: 3 deliverables crossed SLA due dates and 2 are blocked, directly threatening Q3 commitments.\n* **Surfaced Components**: Delivery Risk Banner, Overdue Matrix, Owner Workload Bottleneck, and Rapid Unblocking Path.\n\nThe workspace on your left has brought overdue deliverables and owner bottlenecks into focus. Select an action below:`;
+  } else if (isAdaptiveQuery) {
     actions.push({ type: 'open_adaptive', label: 'Opened PRISM Adaptive Canvas' });
   }
 
@@ -749,40 +770,41 @@ export async function sendTaskadeAgentMessage(input: {
     lower.includes('add row');
 
   let createdTasks: TaskadeNodeRecord[] = [];
-  let reply = '';
 
-  if (openedNode && !modifiedNode && !isTaskCreateRequest) {
-    reply = `Navigated to **Table View** and opened **"${openedNode.title}"** in the Task Inspector.\n\n* **Status**: \`${openedNode.status.toUpperCase()}\` • **Priority**: \`${openedNode.priority.toUpperCase()}\` • **Assignee**: ${openedNode.assignee || 'Unassigned'} • **Due**: ${openedNode.due_date || 'None'}\n\nAll fields are editable directly in the table or via the action buttons below.`;
-  } else if (modifiedNode && modifiedField) {
-    const valStr = typeof modifiedValue === 'string' ? modifiedValue.toUpperCase() : JSON.stringify(modifiedValue);
-    reply = `✅ Updated **${modifiedField.toUpperCase()}** to \`${valStr}\` on **"${modifiedNode.title}"**.\n\nThe project table and database have been updated in real time in the background.`;
-  } else if (actions.some((a) => a.type === 'filter_tasks')) {
-    const filterAct = actions.find((a) => a.type === 'filter_tasks');
-    reply = filterAct?.target
-      ? `Filtered workspace for **"${filterAct.target}"**. Matching tasks are shown in the background view.`
-      : `Filter cleared. All tasks are visible in the background workspace.`;
-  } else if (actions.some((a) => a.type === 'delete_task')) {
-    const delAct = actions.find((a) => a.type === 'delete_task');
-    reply = `🗑️ Removed: ${delAct?.label || 'Deleted task from project table'}.`;
-  } else if (actions.length > 0) {
-    const actionLabels = actions.map((a) => a.label).filter(Boolean);
-    if (actions.some((a) => a.type === 'switch_view' && a.target === 'table')) {
-      reply = `Switched to **Table View**. All records, assignees, and dates are displayed in editable table rows.`;
-    } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'board')) {
-      reply = `Switched to **Board View** (Kanban). Visual workflow pipeline across Todo, In Progress, Review, and Done.`;
-    } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'mindmap')) {
-      reply = `Switched to **Mind Map View**, displaying task nodes clustered by branch hierarchy.`;
-    } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'calendar')) {
-      reply = `Switched to **Calendar View**. Your upcoming deadlines and milestones are scheduled across this week.`;
-    } else if (actions.some((a) => a.type === 'switch_section' && a.target === 'workflows')) {
-      reply = `Opened **Automation Studio**. You can inspect and toggle event-driven DAG workflow triggers.`;
-    } else if (actions.some((a) => a.type === 'switch_section' && a.target === 'agents')) {
-      reply = `Opened **AI Agents Directory**. Review agent profiles, tool assignments, and model tiers.`;
-    } else if (actions.some((a) => a.type === 'switch_workspace')) {
-      const wsTarget = actions.find((a) => a.type === 'switch_workspace')?.target;
-      reply = `Switched workspace to **${wsTarget?.toUpperCase()}**. Domain context and projects have been loaded.`;
-    } else {
-      reply = `Executed operations: ${actionLabels.join(' • ')}.`;
+  if (!reply) {
+    if (openedNode && !modifiedNode && !isTaskCreateRequest) {
+      reply = `Navigated to **Table View** and opened **"${openedNode.title}"** in the Task Inspector.\n\n* **Status**: \`${openedNode.status.toUpperCase()}\` • **Priority**: \`${openedNode.priority.toUpperCase()}\` • **Assignee**: ${openedNode.assignee || 'Unassigned'} • **Due**: ${openedNode.due_date || 'None'}\n\nAll fields are editable directly in the table or via the action buttons below.`;
+    } else if (modifiedNode && modifiedField) {
+      const valStr = typeof modifiedValue === 'string' ? modifiedValue.toUpperCase() : JSON.stringify(modifiedValue);
+      reply = `✅ Updated **${modifiedField.toUpperCase()}** to \`${valStr}\` on **"${modifiedNode.title}"**.\n\nThe project table and database have been updated in real time in the background.`;
+    } else if (actions.some((a) => a.type === 'filter_tasks')) {
+      const filterAct = actions.find((a) => a.type === 'filter_tasks');
+      reply = filterAct?.target
+        ? `Filtered workspace for **"${filterAct.target}"**. Matching tasks are shown in the background view.`
+        : `Filter cleared. All tasks are visible in the background workspace.`;
+    } else if (actions.some((a) => a.type === 'delete_task')) {
+      const delAct = actions.find((a) => a.type === 'delete_task');
+      reply = `🗑️ Removed: ${delAct?.label || 'Deleted task from project table'}.`;
+    } else if (actions.length > 0) {
+      const actionLabels = actions.map((a) => a.label).filter(Boolean);
+      if (actions.some((a) => a.type === 'switch_view' && a.target === 'table')) {
+        reply = `Switched to **Table View**. All records, assignees, and dates are displayed in editable table rows.`;
+      } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'board')) {
+        reply = `Switched to **Board View** (Kanban). Visual workflow pipeline across Todo, In Progress, Review, and Done.`;
+      } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'mindmap')) {
+        reply = `Switched to **Mind Map View**, displaying task nodes clustered by branch hierarchy.`;
+      } else if (actions.some((a) => a.type === 'switch_view' && a.target === 'calendar')) {
+        reply = `Switched to **Calendar View**. Your upcoming deadlines and milestones are scheduled across this week.`;
+      } else if (actions.some((a) => a.type === 'switch_section' && a.target === 'workflows')) {
+        reply = `Opened **Automation Studio**. You can inspect and toggle event-driven DAG workflow triggers.`;
+      } else if (actions.some((a) => a.type === 'switch_section' && a.target === 'agents')) {
+        reply = `Opened **AI Agents Directory**. Review agent profiles, tool assignments, and model tiers.`;
+      } else if (actions.some((a) => a.type === 'switch_workspace')) {
+        const wsTarget = actions.find((a) => a.type === 'switch_workspace')?.target;
+        reply = `Switched workspace to **${wsTarget?.toUpperCase()}**. Domain context and projects have been loaded.`;
+      } else {
+        reply = `Executed operations: ${actionLabels.join(' • ')}.`;
+      }
     }
   }
 
@@ -830,8 +852,10 @@ export async function sendTaskadeAgentMessage(input: {
 
     const taskMsg = `➕ **New Task Created**: Added **"${cleanTitle}"** with Priority **${newTask.priority.toUpperCase()}**, Assignee **${newTask.assignee}**, and Status **${newTask.status.toUpperCase()}**.`;
     reply = reply ? `${reply}\n\n${taskMsg}` : taskMsg;
+  } else if (adaptiveReply) {
+    reply = adaptiveReply;
   } else if (!reply) {
-    reply = `I'm analyzing your active project table with **${input.nodes.length}** records. Give me a command like:\n• *"Open Acme Corp Enterprise Contract Renewal"*\n• *"Set priority to Critical"*\n• *"Assign to Sarah Lin"*\n• *"Create task 'Security Audit' with high priority"*\n• *"Switch to Calendar View"*`;
+    reply = `I'm analyzing your active project table with **${input.nodes.length}** records. Give me a command like:\n• *"Prepare tomorrow's client meeting"*\n• *"Investigate drop in product usage"*\n• *"Review overdue project work"*\n• *"Set priority to Critical"*\n• *"Switch to Calendar View"*`;
   }
 
   const generatedOptions = buildContextualOptions({
@@ -866,6 +890,159 @@ function buildContextualOptions(params: {
 }): AgentActionOption[] {
   const options: AgentActionOption[] = [];
   const q = params.query.toLowerCase();
+
+  // Hackathon Scenario 1: Meeting Prep
+  if (q.includes('meeting') || q.includes('prepare') || q.includes('acme') || q.includes('meridian')) {
+    options.push({
+      id: `opt-brief-${Date.now()}`,
+      label: 'Email Briefing to Sarah Jenkins',
+      icon: 'user',
+      action: {
+        type: 'update_field',
+        taskId: 'node-1',
+        field: 'status',
+        value: 'in_progress',
+        label: 'Briefing deck emailed to Sarah Jenkins',
+      },
+    });
+    options.push({
+      id: `opt-lock-${Date.now()}`,
+      label: 'Lock SLA Draft 4.2',
+      icon: 'check',
+      action: {
+        type: 'update_field',
+        taskId: 'node-1',
+        field: 'priority',
+        value: 'critical',
+        label: 'SLA Clause 4.2 locked & approved',
+      },
+    });
+    options.push({
+      id: `opt-crit-${Date.now()}`,
+      label: 'Set Critical Priority',
+      icon: 'zap',
+      action: {
+        type: 'update_field',
+        taskId: 'node-1',
+        field: 'priority',
+        value: 'critical',
+        label: 'Elevated contract priority to CRITICAL',
+      },
+    });
+    options.push({
+      id: `opt-cal-${Date.now()}`,
+      label: 'Open in Calendar View',
+      icon: 'calendar',
+      action: {
+        type: 'switch_view',
+        target: 'calendar',
+        label: 'Opened Calendar View for tomorrow',
+      },
+    });
+    return options.slice(0, 4);
+  }
+
+  // Hackathon Scenario 2: Usage Drop
+  if (q.includes('usage') || q.includes('drop') || q.includes('smb') || q.includes('why did usage')) {
+    options.push({
+      id: `opt-rollback-${Date.now()}`,
+      label: 'Rollback Gateway #491 Throttling',
+      icon: 'zap',
+      action: {
+        type: 'update_field',
+        taskId: 'node-2',
+        field: 'status',
+        value: 'in_progress',
+        label: 'Rollback executed on Gateway Node #491',
+      },
+    });
+    options.push({
+      id: `opt-notify-${Date.now()}`,
+      label: 'Notify 480 Affected SMB Accounts',
+      icon: 'user',
+      action: {
+        type: 'update_field',
+        taskId: 'node-2',
+        field: 'status',
+        value: 'done',
+        label: 'Broadcast sent to affected accounts',
+      },
+    });
+    options.push({
+      id: `opt-incident-${Date.now()}`,
+      label: 'Create Incident Report #842',
+      icon: 'check',
+      action: {
+        type: 'open_task',
+        taskId: 'node-2',
+        field: 'all',
+        label: 'Opened Incident Report #842',
+      },
+    });
+    options.push({
+      id: `opt-tbl-${Date.now()}`,
+      label: 'Open Segment Table View',
+      icon: 'table',
+      action: {
+        type: 'switch_view',
+        target: 'table',
+        label: 'Opened Table View',
+      },
+    });
+    return options.slice(0, 4);
+  }
+
+  // Hackathon Scenario 3: Overdue Work
+  if (q.includes('overdue') || q.includes('late') || q.includes('blocker') || q.includes('deadline')) {
+    options.push({
+      id: `opt-sre-${Date.now()}`,
+      label: 'Reassign Blocker to SRE Team',
+      icon: 'user',
+      action: {
+        type: 'update_field',
+        taskId: 'node-3',
+        field: 'assignee',
+        value: 'SRE Escalation Team',
+        label: 'Reassigned blocker to SRE Team',
+      },
+    });
+    options.push({
+      id: `opt-ext-${Date.now()}`,
+      label: 'Extend Milestone Deadline +48h',
+      icon: 'calendar',
+      action: {
+        type: 'update_field',
+        taskId: 'node-3',
+        field: 'due_date',
+        value: 'In 2 days',
+        label: 'Extended milestone deadline +48h',
+      },
+    });
+    options.push({
+      id: `opt-slack-${Date.now()}`,
+      label: 'Ping Owners on Slack',
+      icon: 'zap',
+      action: {
+        type: 'update_field',
+        taskId: 'node-3',
+        field: 'status',
+        value: 'in_progress',
+        label: 'Alert sent to Priya Sharma & Marcus Vance',
+      },
+    });
+    options.push({
+      id: `opt-board-${Date.now()}`,
+      label: 'Open in Kanban Board',
+      icon: 'board',
+      action: {
+        type: 'switch_view',
+        target: 'board',
+        label: 'Opened Kanban Board',
+      },
+    });
+    return options.slice(0, 4);
+  }
+
   const activeNode = params.modifiedNode || params.openedNode || params.createdTask;
 
   // 1. Task-specific options when an item was targeted or modified
