@@ -25,10 +25,10 @@ export const RiskMatrixPanel: React.FC = () => {
           </div>
           <div className="mt-2 space-y-1.5 text-[11px] text-slate-200 font-sans">
             <div className="rounded bg-rose-500/20 p-1.5 border border-rose-500/30">
-              ⚡ <strong>Project Apex</strong> — Telemetry latency spike blocker (4 days overdue)
+              • <strong>Project Apex</strong> — Telemetry latency spike blocker (4 days overdue)
             </div>
             <div className="rounded bg-rose-500/20 p-1.5 border border-rose-500/30">
-              ⚡ <strong>Acme Churn Risk</strong> — Support SLA contract negotiation
+              • <strong>Acme Renewal</strong> — Support SLA contract negotiation
             </div>
           </div>
         </div>

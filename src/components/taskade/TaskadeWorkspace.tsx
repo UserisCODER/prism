@@ -1136,7 +1136,7 @@ const AppsSection: React.FC<AppsSectionProps> = ({
               onViewChange('adaptive');
             }}
           >
-            <span>🤝 Client Meeting</span>
+            <span>Client Meeting</span>
           </button>
           <button
             type="button"
@@ -1146,7 +1146,7 @@ const AppsSection: React.FC<AppsSectionProps> = ({
               onViewChange('adaptive');
             }}
           >
-            <span>📉 Usage Drop</span>
+            <span>Usage Drop</span>
           </button>
           <button
             type="button"
@@ -1156,7 +1156,7 @@ const AppsSection: React.FC<AppsSectionProps> = ({
               onViewChange('adaptive');
             }}
           >
-            <span>⏱️ Overdue Work</span>
+            <span>Overdue Work</span>
           </button>
           <button
             type="button"
@@ -1166,7 +1166,7 @@ const AppsSection: React.FC<AppsSectionProps> = ({
               onViewChange('adaptive');
             }}
           >
-            <span>📊 Generic Baseline</span>
+            <span>Dashboard Baseline</span>
           </button>
         </div>
       </div>
@@ -1381,10 +1381,10 @@ const ProjectViewContent: React.FC<ProjectViewContentProps> = ({
                       onChange={(e) => onUpdateField(task.id, 'priority', e.target.value)}
                       aria-label="Change priority"
                     >
-                      <option value="critical">🔴 Critical</option>
-                      <option value="high">🟠 High</option>
-                      <option value="medium">🟡 Medium</option>
-                      <option value="low">🟢 Low</option>
+                      <option value="critical">Critical</option>
+                      <option value="high">High</option>
+                      <option value="medium">Medium</option>
+                      <option value="low">Low</option>
                     </select>
                   </td>
                   <td className={`td-editable-cell ${isAiTarget && (focusedCell?.field === 'assignee' || focusedCell?.field === 'all') ? 'is-cell-pulsing' : ''}`}>

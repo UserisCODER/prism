@@ -11,12 +11,12 @@ const GithubIcon = () => (
 );
 
 const NAV_TABS = [
-  { id: 'code', label: 'Code', icon: '📁' },
-  { id: 'issues', label: 'Issues', icon: '⚪' },
-  { id: 'pulls', label: 'Pull requests', icon: '🔀' },
-  { id: 'actions', label: 'Actions', icon: '▶️' },
-  { id: 'projects', label: 'Projects', icon: '📋' },
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
+  { id: 'code', label: 'Code' },
+  { id: 'issues', label: 'Issues' },
+  { id: 'pulls', label: 'Pull requests' },
+  { id: 'actions', label: 'Actions' },
+  { id: 'projects', label: 'Projects' },
+  { id: 'settings', label: 'Settings' },
 ];
 
 export const GitHubWorkspaceLayout: React.FC = () => {
@@ -117,7 +117,6 @@ export const GitHubWorkspaceLayout: React.FC = () => {
                 marginBottom: '-1px',
               }}
             >
-              <span>{tab.icon}</span>
               {tab.label}
               {tab.id === 'pulls' && <span style={{ background: '#21262d', border: '1px solid #30363d', borderRadius: '10px', padding: '0 6px', fontSize: '11px' }}>3</span>}
               {tab.id === 'issues' && <span style={{ background: '#21262d', border: '1px solid #30363d', borderRadius: '10px', padding: '0 6px', fontSize: '11px' }}>5</span>}
