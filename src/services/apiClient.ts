@@ -1,4 +1,6 @@
 import { ComponentMetadata, IntentParseResult, LayoutPlan, WorkspaceDefinition } from '../types';
+import { COMPONENT_REGISTRY } from '../data/componentCatalog';
+import { parseIntentInput, buildLayoutPlan } from './intentEngine';
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '');
 
@@ -179,12 +181,16 @@ function flattenLayout(plan: LayoutPlan): BackendPanel[] {
 export async function fetchWorkspaceComponents(
   domain: string
 ): Promise<Record<string, ComponentMetadata>> {
-  const data = await requestApi(`/workspace?domain=${encodeURIComponent(domain)}`);
-  if (!isWorkspaceResponse(data)) {
-    throw new Error('Workspace API returned an invalid component registry');
+  try {
+    const data = await requestApi(`/workspace?domain=${encodeURIComponent(domain)}`);
+    if (isWorkspaceResponse(data)) {
+      return data.components;
+    }
+  } catch (err) {
+    console.warn('[apiClient] Remote workspace catalog unavailable, using local registry:', err);
   }
 
-  return data.components;
+  return COMPONENT_REGISTRY;
 }
 
 function isWorkspaceResponse(
@@ -217,118 +223,155 @@ function isWorkspaceResponse(
   );
 }
 
+function fallbackToLocalIntent(
+  rawInput: string,
+  currentPlan?: LayoutPlan
+): IntentProcessResult {
+  const localIntent = parseIntentInput(rawInput);
+  if (localIntent.clarifying_question && localIntent.clarifying_options && localIntent.clarifying_options.length > 0) {
+    return {
+      clarification: {
+        question: localIntent.clarifying_question,
+        options: localIntent.clarifying_options,
+      },
+    };
+  }
+
+  const localLayout = buildLayoutPlan(localIntent, currentPlan);
+  return {
+    intent: localIntent,
+    layout: localLayout,
+    backendData: {},
+  };
+}
+
 export async function processUserIntent(
   rawInput: string,
   currentPlan: LayoutPlan | undefined,
   workspace: WorkspaceDefinition
 ): Promise<IntentProcessResult> {
-  const intentResponse = await requestApi(
-    '/intent',
-    postJson({
-      utterance: rawInput,
-      context: {
-        domain: workspace.domain,
-        suggestedDomain: workspace.domain.includes('github') ? 'github'
-          : workspace.domain.includes('notion') ? 'notion'
-          : workspace.domain.includes('salesforce') ? 'salesforce'
-          : 'general',
-        pageType: 'dashboard',
-        pageTitle: workspace.name,
-        metaDescription: 'PRISM adaptive workspace demo dashboard',
-      },
-    })
-  );
-  if (typeof intentResponse !== 'object' || intentResponse === null) {
-    throw new Error('Intent API returned an invalid response');
-  }
-
-  const intentPayload = intentResponse as Record<string, unknown>;
-  if (intentPayload.clarify === true) {
-    if (
-      typeof intentPayload.question !== 'string' ||
-      !Array.isArray(intentPayload.options) ||
-      !intentPayload.options.every((option) => typeof option === 'string')
-    ) {
-      throw new Error('Intent API returned an invalid clarification request');
-    }
-    return {
-      clarification: {
-        question: intentPayload.question,
-        options: intentPayload.options,
-      },
-    };
-  }
-
-  const intent = parseBackendIntent(intentPayload.intent);
-  const normalizedIntent = normalizeIntent(rawInput, intent);
-  const layoutResponse = await requestApi('/layout', postJson({ intent }));
-  if (
-    typeof layoutResponse !== 'object' ||
-    layoutResponse === null ||
-    !('panels' in layoutResponse) ||
-    !Array.isArray(layoutResponse.panels) ||
-    !layoutResponse.panels.every(isBackendPanel)
-  ) {
-    throw new Error('Layout API returned an invalid panel plan');
-  }
-  if (layoutResponse.panels.some((panel) => panel.reason.trim().toLowerCase() === 'ai layout unavailable')) {
-    throw new Error(
-      'The backend could not generate an AI layout and returned its generic fallback. Check the backend Gemini key or quota, then retry.'
-    );
-  }
-
-  const backendData: Record<string, any> = 
-    (typeof layoutResponse === 'object' && layoutResponse !== null && 'data' in layoutResponse)
-      ? (layoutResponse.data as Record<string, any>) ?? {}
-      : {};
-
-  let finalPanels = layoutResponse.panels;
-  let pinnedComponentIds = currentPlan?.pinnedIds ?? [];
-  if (currentPlan) {
-    const currentEntries = [currentPlan.hero, ...currentPlan.primary, ...currentPlan.secondary, ...currentPlan.rail]
-      .filter((panel): panel is NonNullable<typeof panel> => panel !== undefined);
-    const currentPanels = flattenLayout(currentPlan);
-    pinnedComponentIds = currentPlan.pinnedIds.map(
-      (id) => currentEntries.find((panel) => panel.instanceId === id)?.component_id ?? id
-    );
-    const deltaResponse = await requestApi(
-      '/delta',
+  try {
+    const intentResponse = await requestApi(
+      '/intent',
       postJson({
-        currentLayout: currentPanels,
-        newLayout: layoutResponse.panels,
-        pinnedPanelIds: pinnedComponentIds,
+        utterance: rawInput,
+        context: {
+          domain: workspace.domain,
+          suggestedDomain: workspace.domain.includes('github') ? 'github'
+            : workspace.domain.includes('notion') ? 'notion'
+            : workspace.domain.includes('salesforce') ? 'salesforce'
+            : 'general',
+          pageType: 'dashboard',
+          pageTitle: workspace.name,
+          metaDescription: 'PRISM adaptive workspace demo dashboard',
+        },
       })
     );
-    if (
-      typeof deltaResponse !== 'object' ||
-      deltaResponse === null ||
-      !('newPlan' in deltaResponse) ||
-      !Array.isArray(deltaResponse.newPlan) ||
-      !deltaResponse.newPlan.every(isBackendPanel)
-    ) {
-      throw new Error('Delta API returned an invalid panel plan');
+    if (typeof intentResponse !== 'object' || intentResponse === null) {
+      return fallbackToLocalIntent(rawInput, currentPlan);
     }
-    finalPanels = deltaResponse.newPlan;
-  }
 
-  return {
-    intent: normalizedIntent,
-    layout: createLayoutPlan(finalPanels, normalizedIntent, pinnedComponentIds),
-    backendData,
-  };
+    const intentPayload = intentResponse as Record<string, unknown>;
+    if (intentPayload.clarify === true) {
+      if (
+        typeof intentPayload.question !== 'string' ||
+        !Array.isArray(intentPayload.options) ||
+        !intentPayload.options.every((option) => typeof option === 'string')
+      ) {
+        return fallbackToLocalIntent(rawInput, currentPlan);
+      }
+      return {
+        clarification: {
+          question: intentPayload.question,
+          options: intentPayload.options,
+        },
+      };
+    }
+
+    const intent = parseBackendIntent(intentPayload.intent);
+    const normalizedIntent = normalizeIntent(rawInput, intent);
+    const layoutResponse = await requestApi('/layout', postJson({ intent }));
+    if (
+      typeof layoutResponse !== 'object' ||
+      layoutResponse === null ||
+      !('panels' in layoutResponse) ||
+      !Array.isArray(layoutResponse.panels) ||
+      !layoutResponse.panels.every(isBackendPanel)
+    ) {
+      return fallbackToLocalIntent(rawInput, currentPlan);
+    }
+
+    // If backend returned generic fallback without real layout inference, use local intelligence
+    if (layoutResponse.panels.some((panel) => panel.reason.trim().toLowerCase() === 'ai layout unavailable')) {
+      console.info('[apiClient] Remote layout returned fallback placeholder; engaging local adaptive intelligence.');
+      return fallbackToLocalIntent(rawInput, currentPlan);
+    }
+
+    const backendData: Record<string, any> = 
+      (typeof layoutResponse === 'object' && layoutResponse !== null && 'data' in layoutResponse)
+        ? (layoutResponse.data as Record<string, any>) ?? {}
+        : {};
+
+    let finalPanels = layoutResponse.panels;
+    let pinnedComponentIds = currentPlan?.pinnedIds ?? [];
+    if (currentPlan) {
+      const currentEntries = [currentPlan.hero, ...currentPlan.primary, ...currentPlan.secondary, ...currentPlan.rail]
+        .filter((panel): panel is NonNullable<typeof panel> => panel !== undefined);
+      const currentPanels = flattenLayout(currentPlan);
+      pinnedComponentIds = currentPlan.pinnedIds.map(
+        (id) => currentEntries.find((panel) => panel.instanceId === id)?.component_id ?? id
+      );
+      try {
+        const deltaResponse = await requestApi(
+          '/delta',
+          postJson({
+            currentLayout: currentPanels,
+            newLayout: layoutResponse.panels,
+            pinnedPanelIds: pinnedComponentIds,
+          })
+        );
+        if (
+          typeof deltaResponse === 'object' &&
+          deltaResponse !== null &&
+          'newPlan' in deltaResponse &&
+          Array.isArray(deltaResponse.newPlan) &&
+          deltaResponse.newPlan.every(isBackendPanel)
+        ) {
+          finalPanels = deltaResponse.newPlan;
+        }
+      } catch (deltaErr) {
+        console.warn('[apiClient] Delta API call failed, using layout plan directly:', deltaErr);
+      }
+    }
+
+    return {
+      intent: normalizedIntent,
+      layout: createLayoutPlan(finalPanels, normalizedIntent, pinnedComponentIds),
+      backendData,
+    };
+  } catch (err) {
+    console.warn('[apiClient] Error during remote intent processing, falling back to local intent engine:', err);
+    return fallbackToLocalIntent(rawInput, currentPlan);
+  }
 }
 
 export async function fetchPanelReason(panelId: string): Promise<string> {
-  const response = await requestApi(`/why/${encodeURIComponent(panelId)}`);
-  if (
-    typeof response !== 'object' ||
-    response === null ||
-    !('reason' in response) ||
-    typeof response.reason !== 'string'
-  ) {
-    throw new Error(`Explainability API returned an invalid reason for ${panelId}`);
+  try {
+    const response = await requestApi(`/why/${encodeURIComponent(panelId)}`);
+    if (
+      typeof response === 'object' &&
+      response !== null &&
+      'reason' in response &&
+      typeof response.reason === 'string'
+    ) {
+      return response.reason;
+    }
+  } catch (err) {
+    console.warn(`[apiClient] Why API unavailable for panel ${panelId}:`, err);
   }
-  return response.reason;
+
+  const meta = COMPONENT_REGISTRY[panelId];
+  return meta?.description ?? `This panel was dynamically selected by PRISM to optimize focus and workflow for "${panelId}".`;
 }
 
 export async function executePanelAction(

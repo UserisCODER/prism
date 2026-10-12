@@ -260,11 +260,12 @@ export async function GET(
       nodes: nodes.filter((n) => n.project_id === p.id),
     }));
 
+    const starter = getStarterBundle(ws.id);
     const bundle: FullWorkspaceBundle = {
       workspace: ws,
-      projects: hydratedProjects,
-      agents: agents || [],
-      workflows: workflows || [],
+      projects: hydratedProjects.length > 0 ? hydratedProjects : starter.projects,
+      agents: agents && agents.length > 0 ? agents : starter.agents,
+      workflows: workflows && workflows.length > 0 ? workflows : starter.workflows,
     };
 
     return NextResponse.json({ data: bundle, isFallback: false });

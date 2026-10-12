@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState } from 'react';
-import { ComponentMetadata, IntentParseResult, LayoutPlan, PanelPlan, WorkspaceDefinition } from '../types';
+import { ComponentMetadata, IntentParseResult, LayoutPlan, PanelPlan, PipelineTrace, WorkspaceDefinition } from '../types';
 import {
   executePanelAction,
   fetchPanelReason,
@@ -28,6 +28,7 @@ interface WorkspaceContextType {
   toasts: Toast[];
   pinnedIds: string[];
   liveData: Record<string, any>;
+  pipelineTrace: PipelineTrace | null;
   undoStack: LayoutPlan[];
   explainModalPanel: PanelPlan | null;
   resolveClarification: (option: string) => void;
@@ -58,6 +59,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [undoStack, setUndoStack] = useState<LayoutPlan[]>([]);
   const [pinnedIds, setPinnedIds] = useState<string[]>([]);
   const [liveData, setLiveData] = useState<Record<string, any>>({});
+  const [pipelineTrace, setPipelineTrace] = useState<PipelineTrace | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false);
   const [isLoadingExplanation, setIsLoadingExplanation] = useState<boolean>(false);
   const [clarificationInput, setClarificationInput] = useState('');
@@ -243,6 +245,7 @@ export const WorkspaceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         toasts,
         pinnedIds,
         liveData,
+        pipelineTrace,
         undoStack,
         explainModalPanel,
         resolveClarification,

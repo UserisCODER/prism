@@ -57,28 +57,65 @@ export async function POST(req: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: modelTier === 'REASONING' ? 'gemini-3.5-flash-lite' : 'gemini-3.5-flash-lite',
-      systemInstruction: `You are ${agentName}, a specialized AI agent with the persona: "${agentPersona}".
+      model: process.env.GEMINI_MODEL || (modelTier === 'REASONING' ? 'gemini-2.5-flash' : 'gemini-1.5-flash'),
+      systemInstruction: `You are ${agentName}, a proactive workspace intelligence agent with the persona: "${agentPersona}".
 ${systemPrompt}
 
 Current Project Nodes in the Workspace:
 ${currentNodesText || '(No items currently in project)'}
 
-Your responsibilities:
-1. Provide concise, clear, and actionable answers to the user.
-2. If the user asks you to create a task, sub-task, or action item, you MUST include a JSON block at the very end of your response with the generated task(s) in this exact format:
-\`\`\`tasks
+CRITICAL RULES:
+1. DIRECT DATA ACTION EXECUTION: You are an active agent that directly operates on workspace data and views. You do NOT simply describe what could be done or ask passive questions. When the user asks to open, inspect, view, create, update, delete, or manipulate tasks, or switch tabs/views/workspaces, you MUST execute these operations by providing a JSON \`\`\`actions code block at the very end of your response.
+2. Structure of the \`\`\`actions code block:
+\`\`\`actions
 [
   {
-    "title": "Task title here",
-    "content": "Short description",
-    "status": "todo",
-    "priority": "high",
-    "assignee": "Name or Unassigned"
+    "type": "open_task",
+    "taskId": "id-of-node",
+    "taskTitle": "title of node",
+    "field": "all",
+    "label": "Opened task in Inspector"
+  },
+  {
+    "type": "update_field",
+    "taskId": "id-of-node",
+    "taskTitle": "title of node",
+    "field": "priority" | "status" | "assignee" | "due_date" | "content" | "title",
+    "value": "critical" | "high" | "medium" | "low" | "done" | "in_progress" | "review" | "todo" | "new value",
+    "label": "Updated <field> to <value>"
+  },
+  {
+    "type": "create_task",
+    "task": {
+      "title": "Task title",
+      "content": "Description / notes",
+      "status": "todo" | "in_progress",
+      "priority": "critical" | "high" | "medium" | "low",
+      "assignee": "Name",
+      "dueDate": "Tomorrow"
+    },
+    "label": "Created task <title>"
+  },
+  {
+    "type": "delete_task",
+    "taskId": "id-of-node",
+    "label": "Deleted task <title>"
+  },
+  {
+    "type": "switch_view",
+    "target": "table" | "board" | "mindmap" | "calendar" | "list",
+    "label": "Switched to <target> view"
+  },
+  {
+    "type": "switch_workspace",
+    "target": "salesforce" | "notion" | "github",
+    "label": "Switched to <target> workspace"
   }
 ]
 \`\`\`
-3. Otherwise, speak naturally in markdown format.`,
+3. If the user asks to "open Acme Corp..." or "open [task]", emit BOTH "switch_view" (target: "table") and "open_task" (taskId: matching node ID).
+4. If the user asks to change or set a field (e.g., "set priority to critical", "assign to Sarah", "mark as review"), emit "update_field".
+5. In your markdown text, give a brief, professional summary of the exact actions taken and fields modified. Do NOT output placeholder conversational loops like "Would you like me to draft an email...".`,
       generationConfig: {
         temperature: 0.2,
       },
@@ -91,37 +128,85 @@ Your responsibilities:
     const result = await model.generateContent(conversationHistoryPrompt);
     const responseText = result.response.text();
 
-    // Check if new tasks were suggested by the agent
     let createdTasks: any[] = [];
+    let actions: any[] = [];
     let cleanText = responseText;
 
+    // Parse ```actions block
+    const actionMatch = responseText.match(/```actions\s*([\s\S]*?)\s*```/);
+    if (actionMatch && actionMatch[1]) {
+      try {
+        const parsedActions = JSON.parse(actionMatch[1]);
+        if (Array.isArray(parsedActions)) {
+          actions = parsedActions;
+          for (const act of actions) {
+            if (act.type === 'update_field' && act.taskId && act.field) {
+              const fieldKey = act.field === 'due_date' || act.field === 'dueDate' ? 'due_date' : act.field;
+              await supabase
+                .from('node_items')
+                .update({ [fieldKey]: act.value, updated_at: new Date().toISOString() })
+                .eq('id', act.taskId);
+            } else if (act.type === 'create_task' && act.task && projectId) {
+              const t = act.task;
+              const newTask = {
+                id: crypto.randomUUID(),
+                project_id: projectId,
+                parent_id: null,
+                title: t.title,
+                content: t.content || '',
+                status: t.status || 'todo',
+                priority: t.priority || 'medium',
+                order_index: (nodes?.length || 0) + createdTasks.length,
+                assignee: t.assignee || 'AI Agent',
+                due_date: t.dueDate || t.due_date || null,
+                created_at: new Date().toISOString(),
+              };
+              createdTasks.push(newTask);
+              await supabase.from('node_items').insert([newTask]);
+            } else if (act.type === 'delete_task' && act.taskId) {
+              await supabase.from('node_items').delete().eq('id', act.taskId);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to parse actions JSON:', e);
+      }
+      cleanText = cleanText.replace(/```actions[\s\S]*?```/, '').trim();
+    }
+
+    // Also support legacy ```tasks block
     const taskMatch = responseText.match(/```tasks\s*([\s\S]*?)\s*```/);
     if (taskMatch && taskMatch[1]) {
       try {
         const parsedTasks = JSON.parse(taskMatch[1]);
         if (Array.isArray(parsedTasks) && projectId) {
-          createdTasks = parsedTasks.map((t, idx) => ({
-            id: crypto.randomUUID(),
-            project_id: projectId,
-            parent_id: null,
-            title: t.title,
-            content: t.content || '',
-            status: t.status || 'todo',
-            priority: t.priority || 'medium',
-            order_index: idx + (nodes?.length || 0),
-            assignee: t.assignee || 'AI Agent',
-            created_at: new Date().toISOString(),
-          }));
-
-          // Try saving to DB
+          for (const [idx, t] of parsedTasks.entries()) {
+            const newTask = {
+              id: crypto.randomUUID(),
+              project_id: projectId,
+              parent_id: null,
+              title: t.title,
+              content: t.content || '',
+              status: t.status || 'todo',
+              priority: t.priority || 'medium',
+              order_index: idx + (nodes?.length || 0),
+              assignee: t.assignee || 'AI Agent',
+              created_at: new Date().toISOString(),
+            };
+            createdTasks.push(newTask);
+            actions.push({
+              type: 'create_task',
+              taskId: newTask.id,
+              taskTitle: newTask.title,
+              label: `Created task "${newTask.title}"`,
+            });
+          }
           await supabase.from('node_items').insert(createdTasks);
         }
       } catch (e) {
         console.warn('Failed to parse suggested tasks JSON:', e);
       }
-
-      // Strip the tasks code block from user-facing text
-      cleanText = responseText.replace(/```tasks[\s\S]*?```/, '').trim();
+      cleanText = cleanText.replace(/```tasks[\s\S]*?```/, '').trim();
     }
 
     return NextResponse.json({
@@ -132,6 +217,7 @@ Your responsibilities:
         persona: agentPersona,
       },
       createdTasks,
+      actions: actions.length > 0 ? actions : undefined,
     });
   } catch (err: any) {
     console.error('[API/V1/AGENTS/CHAT] Error:', err);

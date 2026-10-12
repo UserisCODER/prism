@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: 'gemini-3.5-flash-lite',
+      model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
       systemInstruction: `You are TSK-1 (Task System Kernel), the core intelligence system powering an all-in-one AI app builder, project management system, and workflow automation engine.
 Given the user's intent or app prompt, generate a production-ready application bundle in JSON format.
 

@@ -130,3 +130,9 @@ export interface CommunicationData {
   snippet: string;
   urgencyTag?: string;
 }
+
+export interface PipelineTrace {
+  intentResponse?: unknown;
+  layoutResponse?: unknown;
+  deltaResponse?: unknown;
+}

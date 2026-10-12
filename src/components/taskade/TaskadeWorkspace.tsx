@@ -10,6 +10,9 @@ import {
   ChevronRight,
   Clock3,
   Command,
+  Edit3,
+  ExternalLink,
+  Eye,
   GitBranch,
   LayoutGrid,
   List,
@@ -23,6 +26,8 @@ import {
   Share2,
   Sparkles,
   Table2,
+  Tag,
+  Trash2,
   Users,
   Workflow,
   X,
@@ -32,6 +37,7 @@ import {
   createTaskadeAgent,
   createTaskadeNode,
   createTaskadeWorkflow,
+  deleteTaskadeNode,
   fetchTaskadeWorkspace,
   fetchTaskadeWorkspaces,
   sendTaskadeAgentMessage,
@@ -47,6 +53,7 @@ import {
   updateTaskadeWorkflow,
 } from '../../services/taskadeApi';
 import './TaskadeWorkspace.css';
+import { TaskDetailInspector } from './TaskDetailInspector';
 
 type MainSection = 'apps' | 'agents' | 'workflows';
 type ProjectView = 'list' | 'board' | 'mindmap' | 'table' | 'calendar';
@@ -98,6 +105,7 @@ interface ChatMessage {
   id: string;
   sender: 'user' | 'agent';
   text: string;
+  actionTaken?: string;
 }
 
 interface TaskadeWorkspaceProps {
@@ -223,6 +231,8 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [selectedTask, setSelectedTask] = useState<TaskItem | null>(null);
+  const [focusedCell, setFocusedCell] = useState<{ taskId: string; field: string } | null>(null);
   const activeProject = projectList.find((project) => project.id === activeProjectId) ?? null;
   const activeWorkflows = Object.fromEntries(workflowList.map((workflow) => [workflow.id, workflow.active ?? false]));
 
@@ -326,6 +336,49 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
         : project));
     } catch (error) {
       setApiError(error instanceof Error ? error.message : 'Could not update this task.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const updateTaskField = async (taskId: string, field: keyof TaskItem, value: any) => {
+    const task = tasks.find((item) => item.id === taskId);
+    if (!task) return;
+    setIsSaving(true);
+    setApiError(null);
+    try {
+      const apiField = field === 'dueDate' ? 'due_date' : field;
+      const saved = await updateTaskadeNode(taskId, {
+        [apiField]: value,
+      });
+      const updatedTask = toTaskItem(saved);
+      setTasks((current) => current.map((item) => item.id === taskId ? updatedTask : item));
+      setProjectList((current) => current.map((project) => project.id === saved.project_id
+        ? { ...project, nodes: project.nodes.map((node) => node.id === taskId ? saved : node) }
+        : project));
+      setSelectedTask((current) => (current?.id === taskId ? updatedTask : current));
+      setFocusedCell({ taskId, field: String(field) });
+      setTimeout(() => setFocusedCell(null), 2500);
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not update task field.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    setIsSaving(true);
+    setApiError(null);
+    try {
+      await deleteTaskadeNode(taskId);
+      setTasks((current) => current.filter((item) => item.id !== taskId));
+      setProjectList((current) => current.map((project) => ({
+        ...project,
+        nodes: project.nodes.filter((node) => node.id !== taskId),
+      })));
+      setSelectedTask((current) => (current?.id === taskId ? null : current));
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : 'Could not delete this task.');
     } finally {
       setIsSaving(false);
     }
@@ -456,23 +509,83 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
       const result = await sendTaskadeAgentMessage({
         message,
         agentId: selectedAgent?.id,
+        agentName: selectedAgent?.name || chatAgent || 'Prism AI',
         workspaceId: activeWorkspace.id,
         projectId: activeProject?.id,
         history: previousMessages.map(({ sender, text }) => ({ sender, text })),
         nodes: activeProject?.nodes ?? [],
       });
 
-      setChatMessages((current) => [
-        ...current,
-        { id: `agent-${Date.now()}`, sender: 'agent', text: result.reply },
-      ]);
-      if (result.createdTasks.length > 0) {
+      // Execute AI actions on the workspace and table
+      let newlyCreatedItem: TaskItem | null = null;
+      if (result.createdTasks && result.createdTasks.length > 0) {
         const created = result.createdTasks.map(toTaskItem);
+        newlyCreatedItem = created[0];
         setTasks((current) => [...created, ...current]);
         setProjectList((current) => current.map((project) => project.id === activeProject?.id
           ? { ...project, nodes: [...result.createdTasks, ...project.nodes] }
           : project));
       }
+
+      if (result.actions && result.actions.length > 0) {
+        for (const act of result.actions) {
+          if (act.type === 'switch_view' && act.target) {
+            setView(act.target as ProjectView);
+            setSection('apps');
+            setSelectedTask(null);
+          } else if (act.type === 'switch_section' && act.target) {
+            setSection(act.target as MainSection);
+            setSelectedTask(null);
+          } else if (act.type === 'switch_workspace' && act.target) {
+            setSelectedTask(null);
+            const targetDomain = act.target.toLowerCase();
+            const matchedWs = workspaceList.find(
+              (w) =>
+                (w.domain && w.domain.toLowerCase().includes(targetDomain)) ||
+                (w.slug && w.slug.toLowerCase().includes(targetDomain)) ||
+                w.name.toLowerCase().includes(targetDomain)
+            );
+            if (matchedWs) {
+              void selectWorkspace(matchedWs);
+            }
+          } else if (act.type === 'open_adaptive') {
+            onOpenAdaptiveCanvas();
+          } else if (act.type === 'open_task' && act.taskId) {
+            const targetItem = tasks.find((t) => t.id === act.taskId) ||
+              (result.createdTasks?.find((t) => t.id === act.taskId) ? toTaskItem(result.createdTasks.find((t) => t.id === act.taskId)!) : newlyCreatedItem);
+            if (targetItem) {
+              setSelectedTask(targetItem);
+              setFocusedCell({ taskId: act.taskId, field: act.field || 'all' });
+              setTimeout(() => setFocusedCell(null), 3000);
+            }
+            setView('table');
+            setSection('apps');
+          } else if (act.type === 'update_field' && act.taskId && act.field) {
+            const propField = act.field === 'due_date' ? 'dueDate' : act.field;
+            void updateTaskField(act.taskId, propField as keyof TaskItem, act.value);
+          } else if (act.type === 'delete_task' && act.taskId) {
+            void deleteTask(act.taskId);
+          } else if (act.type === 'update_task' && act.taskId) {
+            void toggleTask(act.taskId);
+          } else if (act.type === 'filter_tasks') {
+            setSearch(act.target || '');
+          }
+        }
+      }
+
+      const actionSummary = result.actions && result.actions.length > 0
+        ? result.actions.map((a) => a.label).filter(Boolean).join(' • ')
+        : undefined;
+
+      setChatMessages((current) => [
+        ...current,
+        {
+          id: `agent-${Date.now()}`,
+          sender: 'agent',
+          text: result.reply,
+          actionTaken: actionSummary,
+        },
+      ]);
     } catch (error) {
       const messageText = error instanceof Error ? error.message : 'The agent could not respond.';
       setApiError(messageText);
@@ -691,10 +804,10 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               className="td-help-button"
               onClick={() => {
                 setChatMessages([]);
-                setChatAgent(agentList[0]?.name ?? 'PRISM assistant');
+                setChatAgent(agentList[0]?.name ?? 'Prism AI');
               }}
             >
-              <Sparkles size={15} /> Ask PRISM
+              <Sparkles size={14} /> Ask Prism AI
             </button>
           </div>
         </header>
@@ -727,9 +840,14 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               tasks={filteredTasks}
               view={view}
               search={search}
+              selectedTaskId={selectedTask?.id ?? null}
+              focusedCell={focusedCell}
               onViewChange={setView}
               onToggleTask={toggleTask}
               onAddTask={openCreate}
+              onOpenTask={(task) => setSelectedTask(task)}
+              onUpdateField={updateTaskField}
+              onDeleteTask={deleteTask}
               onOpenAdaptiveCanvas={onOpenAdaptiveCanvas}
             />
           )}
@@ -762,14 +880,38 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
       {chatAgent && (
         <AgentDrawer
           agentName={chatAgent}
-          workspaceId={activeWorkspace?.id}
+          activeWorkspace={activeWorkspace}
+          workspaces={workspaceList}
+          activeView={view}
+          activeSection={section}
           nodes={activeProject?.nodes ?? []}
+          selectedTask={selectedTask}
           messages={chatMessages}
           input={chatInput}
           isSending={isSendingMessage}
           onInputChange={setChatInput}
           onSend={sendMessage}
+          onSwitchView={(newView) => {
+            setView(newView);
+            setSection('apps');
+          }}
+          onSwitchSection={(newSec) => setSection(newSec)}
+          onSwitchWorkspace={(ws) => void selectWorkspace(ws)}
+          onOpenTask={(task) => setSelectedTask(task)}
+          onOpenAdaptiveCanvas={onOpenAdaptiveCanvas}
           onClose={() => setChatAgent(null)}
+        />
+      )}
+      {selectedTask && (
+        <TaskDetailInspector
+          task={selectedTask}
+          workspaceName={activeWorkspace?.name ?? 'Workspace'}
+          projectName={activeProject?.name ?? 'Project'}
+          isAiTarget={focusedCell?.taskId === selectedTask.id}
+          focusedField={focusedCell?.field}
+          onClose={() => setSelectedTask(null)}
+          onUpdateField={updateTaskField}
+          onDeleteTask={deleteTask}
         />
       )}
       {showTaskForm && (
@@ -810,9 +952,14 @@ interface AppsSectionProps {
   tasks: TaskItem[];
   view: ProjectView;
   search: string;
+  selectedTaskId: string | null;
+  focusedCell: { taskId: string; field: string } | null;
   onViewChange: (view: ProjectView) => void;
   onToggleTask: (taskId: string) => void;
   onAddTask: () => void;
+  onOpenTask: (task: TaskItem) => void;
+  onUpdateField: (taskId: string, field: keyof TaskItem, value: any) => void;
+  onDeleteTask: (taskId: string) => void;
   onOpenAdaptiveCanvas: () => void;
 }
 
@@ -821,9 +968,14 @@ const AppsSection: React.FC<AppsSectionProps> = ({
   tasks,
   view,
   search,
+  selectedTaskId,
+  focusedCell,
   onViewChange,
   onToggleTask,
   onAddTask,
+  onOpenTask,
+  onUpdateField,
+  onDeleteTask,
   onOpenAdaptiveCanvas,
 }) => {
   const completed = tasks.filter((task) => task.status === 'done').length;
@@ -890,8 +1042,13 @@ const AppsSection: React.FC<AppsSectionProps> = ({
         <ProjectViewContent
           tasks={tasks}
           view={view}
+          selectedTaskId={selectedTaskId}
+          focusedCell={focusedCell}
           onToggleTask={onToggleTask}
           onAddTask={onAddTask}
+          onOpenTask={onOpenTask}
+          onUpdateField={onUpdateField}
+          onDeleteTask={onDeleteTask}
         />
       )}
 
@@ -905,11 +1062,26 @@ const AppsSection: React.FC<AppsSectionProps> = ({
 interface ProjectViewContentProps {
   tasks: TaskItem[];
   view: ProjectView;
+  selectedTaskId: string | null;
+  focusedCell: { taskId: string; field: string } | null;
   onToggleTask: (taskId: string) => void;
   onAddTask: () => void;
+  onOpenTask: (task: TaskItem) => void;
+  onUpdateField: (taskId: string, field: keyof TaskItem, value: any) => void;
+  onDeleteTask: (taskId: string) => void;
 }
 
-const ProjectViewContent: React.FC<ProjectViewContentProps> = ({ tasks, view, onToggleTask, onAddTask }) => {
+const ProjectViewContent: React.FC<ProjectViewContentProps> = ({
+  tasks,
+  view,
+  selectedTaskId,
+  focusedCell,
+  onToggleTask,
+  onAddTask,
+  onOpenTask,
+  onUpdateField,
+  onDeleteTask,
+}) => {
   if (view === 'list') {
     return (
       <div className="td-list-view">
@@ -919,7 +1091,16 @@ const ProjectViewContent: React.FC<ProjectViewContentProps> = ({ tasks, view, on
           return (
             <section className="td-list-group" key={status}>
               <h2><ChevronDown size={15} /><span className={`td-status-dot td-status-${status}`} />{statusLabels[status]}<span className="td-group-count">{statusTasks.length}</span></h2>
-              {statusTasks.map((task) => <TaskRow key={task.id} task={task} onToggle={onToggleTask} />)}
+              {statusTasks.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  isSelected={selectedTaskId === task.id}
+                  isAiTarget={focusedCell?.taskId === task.id}
+                  onToggle={onToggleTask}
+                  onOpen={onOpenTask}
+                />
+              ))}
             </section>
           );
         })}
@@ -940,7 +1121,16 @@ const ProjectViewContent: React.FC<ProjectViewContentProps> = ({ tasks, view, on
                 <button type="button" className="td-small-icon-button" aria-label={`Add ${statusLabels[status]} task`} onClick={onAddTask}><Plus size={15} /></button>
               </div>
               <div className="td-board-cards">
-                {statusTasks.map((task) => <TaskCard key={task.id} task={task} onToggle={onToggleTask} />)}
+                {statusTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isSelected={selectedTaskId === task.id}
+                    isAiTarget={focusedCell?.taskId === task.id}
+                    onToggle={onToggleTask}
+                    onOpen={onOpenTask}
+                  />
+                ))}
                 <button type="button" className="td-column-add" onClick={onAddTask}><Plus size={14} /> Add task</button>
               </div>
             </section>
@@ -954,17 +1144,126 @@ const ProjectViewContent: React.FC<ProjectViewContentProps> = ({ tasks, view, on
     return (
       <div className="td-table-wrap">
         <table className="td-data-table">
-          <thead><tr><th>Task</th><th>Status</th><th>Priority</th><th>Assignee</th><th>Due date</th></tr></thead>
-          <tbody>{tasks.map((task) => (
-            <tr key={task.id}>
-              <td><TaskCheckbox task={task} onToggle={onToggleTask} /><span className={task.status === 'done' ? 'is-done' : ''}>{task.title}</span></td>
-              <td><span className={`td-status-pill td-pill-${task.status}`}>{statusLabels[task.status]}</span></td>
-              <td><span className={`td-priority td-priority-${task.priority}`}><span />{task.priority}</span></td>
-              <td><span className="td-table-assignee">{task.assignee.slice(0, 1)}</span>{task.assignee}</td>
-              <td>{task.dueDate}</td>
+          <thead>
+            <tr>
+              <th style={{ width: '38%' }}>Task / Record</th>
+              <th style={{ width: '15%' }}>Status</th>
+              <th style={{ width: '15%' }}>Priority</th>
+              <th style={{ width: '16%' }}>Assignee</th>
+              <th style={{ width: '12%' }}>Due Date</th>
+              <th style={{ width: '4%', textAlign: 'center' }}>Actions</th>
             </tr>
-          ))}</tbody>
+          </thead>
+          <tbody>
+            {tasks.map((task) => {
+              const isSelected = selectedTaskId === task.id;
+              const isAiTarget = focusedCell?.taskId === task.id;
+
+              return (
+                <tr
+                  key={task.id}
+                  className={`td-table-row ${isSelected ? 'is-selected-row' : ''} ${isAiTarget ? 'is-ai-pulse-row' : ''}`}
+                >
+                  <td className="td-table-title-cell">
+                    <div className="td-title-container">
+                      <TaskCheckbox task={task} onToggle={onToggleTask} />
+                      <button
+                        type="button"
+                        className={`td-table-title-btn ${task.status === 'done' ? 'is-done' : ''}`}
+                        onClick={() => onOpenTask(task)}
+                        title="Click to inspect task fields"
+                      >
+                        <span>{task.title}</span>
+                        <Eye size={12} className="td-open-indicator" />
+                      </button>
+                    </div>
+                  </td>
+                  <td className={`td-editable-cell ${isAiTarget && (focusedCell?.field === 'status' || focusedCell?.field === 'all') ? 'is-cell-pulsing' : ''}`}>
+                    <select
+                      className={`td-table-select td-pill-${task.status}`}
+                      value={task.status}
+                      onChange={(e) => onUpdateField(task.id, 'status', e.target.value)}
+                      aria-label="Change status"
+                    >
+                      <option value="todo">To do</option>
+                      <option value="in_progress">In progress</option>
+                      <option value="review">In review</option>
+                      <option value="done">Done</option>
+                    </select>
+                  </td>
+                  <td className={`td-editable-cell ${isAiTarget && (focusedCell?.field === 'priority' || focusedCell?.field === 'all') ? 'is-cell-pulsing' : ''}`}>
+                    <select
+                      className={`td-table-select td-priority-select td-p-${task.priority}`}
+                      value={task.priority}
+                      onChange={(e) => onUpdateField(task.id, 'priority', e.target.value)}
+                      aria-label="Change priority"
+                    >
+                      <option value="critical">🔴 Critical</option>
+                      <option value="high">🟠 High</option>
+                      <option value="medium">🟡 Medium</option>
+                      <option value="low">🟢 Low</option>
+                    </select>
+                  </td>
+                  <td className={`td-editable-cell ${isAiTarget && (focusedCell?.field === 'assignee' || focusedCell?.field === 'all') ? 'is-cell-pulsing' : ''}`}>
+                    <select
+                      className="td-table-select td-assignee-select"
+                      value={task.assignee}
+                      onChange={(e) => onUpdateField(task.id, 'assignee', e.target.value)}
+                      aria-label="Change assignee"
+                    >
+                      <option value="Sarah Lin">Sarah Lin</option>
+                      <option value="Alex Rivera">Alex Rivera</option>
+                      <option value="Marcus Vance">Marcus Vance</option>
+                      <option value="AI Agent">AI Agent</option>
+                      <option value="You">You</option>
+                      <option value="Unassigned">Unassigned</option>
+                    </select>
+                  </td>
+                  <td className={`td-editable-cell ${isAiTarget && (focusedCell?.field === 'dueDate' || focusedCell?.field === 'due_date' || focusedCell?.field === 'all') ? 'is-cell-pulsing' : ''}`}>
+                    <button
+                      type="button"
+                      className="td-due-date-btn"
+                      onClick={() => onOpenTask(task)}
+                      title="Edit due date"
+                    >
+                      <Clock3 size={11} /> {task.dueDate}
+                    </button>
+                  </td>
+                  <td className="td-actions-cell">
+                    <div className="td-row-actions">
+                      <button
+                        type="button"
+                        className="td-row-action-btn"
+                        onClick={() => onOpenTask(task)}
+                        title="Inspect record fields"
+                      >
+                        <ExternalLink size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        className="td-row-action-btn td-delete-btn"
+                        onClick={() => {
+                          if (window.confirm(`Delete "${task.title}"?`)) {
+                            onDeleteTask(task.id);
+                          }
+                        }}
+                        title="Delete task"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
         </table>
+        <div className="td-table-footer-bar">
+          <span>{tasks.length} records in active table</span>
+          <button type="button" className="td-table-add-row-btn" onClick={onAddTask}>
+            <Plus size={13} /> Add row
+          </button>
+        </div>
       </div>
     );
   }
@@ -981,7 +1280,7 @@ const ProjectViewContent: React.FC<ProjectViewContentProps> = ({ tasks, view, on
               <div className={`td-mindmap-branch td-branch-${index + 1}`} key={status}>
                 <div className="td-mindmap-category"><span className={`td-status-dot td-status-${status}`} />{statusLabels[status]}</div>
                 <div className="td-mindmap-items">{branchTasks.map((task) => (
-                  <button type="button" key={task.id} onClick={() => onToggleTask(task.id)} className={`td-mindmap-node ${task.status === 'done' ? 'is-done' : ''}`}>
+                  <button type="button" key={task.id} onClick={() => onOpenTask(task)} className={`td-mindmap-node ${task.status === 'done' ? 'is-done' : ''} ${selectedTaskId === task.id ? 'is-selected' : ''}`}>
                     <span className={`td-status-dot td-status-${task.status}`} />{task.title}
                   </button>
                 ))}</div>
@@ -989,12 +1288,12 @@ const ProjectViewContent: React.FC<ProjectViewContentProps> = ({ tasks, view, on
             );
           })}
         </div>
-        <div className="td-mindmap-footer"><GitBranch size={14} /> Click a task to update its status</div>
+        <div className="td-mindmap-footer"><GitBranch size={14} /> Click a task to inspect its fields</div>
       </div>
     );
   }
 
-  return <CalendarView tasks={tasks} onToggleTask={onToggleTask} />;
+  return <CalendarView tasks={tasks} onToggleTask={onToggleTask} onOpenTask={onOpenTask} />;
 };
 
 const TaskCheckbox: React.FC<{ task: TaskItem; onToggle: (id: string) => void }> = ({ task, onToggle }) => (
@@ -1008,38 +1307,69 @@ const TaskCheckbox: React.FC<{ task: TaskItem; onToggle: (id: string) => void }>
   </button>
 );
 
-const TaskRow: React.FC<{ task: TaskItem; onToggle: (id: string) => void }> = ({ task, onToggle }) => (
-  <div className="td-task-row">
+const TaskRow: React.FC<{
+  task: TaskItem;
+  isSelected?: boolean;
+  isAiTarget?: boolean;
+  onToggle: (id: string) => void;
+  onOpen: (task: TaskItem) => void;
+}> = ({ task, isSelected, isAiTarget, onToggle, onOpen }) => (
+  <div className={`td-task-row ${isSelected ? 'is-selected-row' : ''} ${isAiTarget ? 'is-ai-pulse-row' : ''}`}>
     <TaskCheckbox task={task} onToggle={onToggle} />
-    <span className={`td-task-title ${task.status === 'done' ? 'is-done' : ''}`}>{task.title}</span>
+    <button
+      type="button"
+      className={`td-task-title td-task-row-btn ${task.status === 'done' ? 'is-done' : ''}`}
+      onClick={() => onOpen(task)}
+    >
+      <span>{task.title}</span>
+    </button>
     {task.tags.map((tag) => <span className="td-tag" key={tag}>{tag}</span>)}
     <span className={`td-priority td-priority-${task.priority}`}><span />{task.priority}</span>
     <span className="td-row-assignee"><span className="td-table-assignee">{task.assignee.slice(0, 1)}</span>{task.assignee}</span>
     <span className="td-row-due"><Clock3 size={13} />{task.dueDate}</span>
-    <button type="button" className="td-small-icon-button" aria-label={`${task.title} options`}><MoreHorizontal size={16} /></button>
+    <button type="button" className="td-small-icon-button" aria-label={`${task.title} options`} onClick={() => onOpen(task)}>
+      <ExternalLink size={14} />
+    </button>
   </div>
 );
 
-const TaskCard: React.FC<{ task: TaskItem; onToggle: (id: string) => void }> = ({ task, onToggle }) => (
-  <article className={`td-task-card ${task.status === 'done' ? 'is-complete' : ''}`}>
+const TaskCard: React.FC<{
+  task: TaskItem;
+  isSelected?: boolean;
+  isAiTarget?: boolean;
+  onToggle: (id: string) => void;
+  onOpen: (task: TaskItem) => void;
+}> = ({ task, isSelected, isAiTarget, onToggle, onOpen }) => (
+  <article className={`td-task-card ${task.status === 'done' ? 'is-complete' : ''} ${isSelected ? 'is-selected-card' : ''} ${isAiTarget ? 'is-ai-pulse-card' : ''}`}>
     <div className="td-card-topline">
       <span className={`td-priority td-priority-${task.priority}`}><span />{task.priority}</span>
-      <button type="button" className="td-small-icon-button" aria-label={`${task.title} options`}><MoreHorizontal size={16} /></button>
+      <button type="button" className="td-small-icon-button" aria-label={`Open ${task.title}`} onClick={() => onOpen(task)}>
+        <ExternalLink size={14} />
+      </button>
     </div>
     <div className="td-card-title-button">
       <TaskCheckbox task={task} onToggle={onToggle} />
-      <span className={task.status === 'done' ? 'is-done' : ''}>{task.title}</span>
+      <span
+        className={`td-card-title-text ${task.status === 'done' ? 'is-done' : ''}`}
+        onClick={() => onOpen(task)}
+      >
+        {task.title}
+      </span>
     </div>
-    {task.content && <p>{task.content}</p>}
+    {task.content && <p onClick={() => onOpen(task)}>{task.content}</p>}
     <div className="td-card-tags">{task.tags.map((tag) => <span className="td-tag" key={tag}>{tag}</span>)}</div>
-    <div className="td-card-footer">
+    <div className="td-card-footer" onClick={() => onOpen(task)}>
       <span className="td-card-person"><span className={`td-table-assignee td-assignee-${task.assignee.charCodeAt(0) % 4}`}>{task.assignee.slice(0, 1)}</span>{task.assignee.split(' ')[0]}</span>
       <span className="td-card-date"><Clock3 size={13} />{task.dueDate}</span>
     </div>
   </article>
 );
 
-const CalendarView: React.FC<{ tasks: TaskItem[]; onToggleTask: (id: string) => void }> = ({ tasks, onToggleTask }) => {
+const CalendarView: React.FC<{
+  tasks: TaskItem[];
+  onToggleTask: (id: string) => void;
+  onOpenTask?: (task: TaskItem) => void;
+}> = ({ tasks, onToggleTask, onOpenTask }) => {
   const days = [
     { name: 'Mon', date: '12' },
     { name: 'Tue', date: '13' },
@@ -1058,7 +1388,16 @@ const CalendarView: React.FC<{ tasks: TaskItem[]; onToggleTask: (id: string) => 
         {days.map((day) => (
           <section className={`td-calendar-day ${day.date === '12' ? 'is-today' : ''}`} key={day.date}>
             <div className="td-calendar-day-head"><span>{day.name}</span><strong>{day.date}</strong></div>
-            {getDayTasks(day).map((task) => <button type="button" className={`td-calendar-task td-calendar-${task.priority}`} key={task.id} onClick={() => onToggleTask(task.id)}>{task.title}</button>)}
+            {getDayTasks(day).map((task) => (
+              <button
+                type="button"
+                className={`td-calendar-task td-calendar-${task.priority}`}
+                key={task.id}
+                onClick={() => (onOpenTask ? onOpenTask(task) : onToggleTask(task.id))}
+              >
+                {task.title}
+              </button>
+            ))}
           </section>
         ))}
       </div>
@@ -1301,55 +1640,285 @@ const WorkflowBuilder: React.FC<{
 
 interface AgentDrawerProps {
   agentName: string;
-  workspaceId?: string;
+  activeWorkspace: TaskadeWorkspaceRecord | null;
+  workspaces: TaskadeWorkspaceRecord[];
+  activeView: ProjectView;
+  activeSection: MainSection;
   nodes: TaskadeNodeRecord[];
+  selectedTask?: TaskItem | null;
   messages: ChatMessage[];
   input: string;
   isSending: boolean;
   onInputChange: (value: string) => void;
   onSend: (event: React.FormEvent<HTMLFormElement>) => void;
+  onSwitchView: (view: ProjectView) => void;
+  onSwitchSection: (section: MainSection) => void;
+  onSwitchWorkspace: (workspace: TaskadeWorkspaceRecord) => void;
+  onOpenTask?: (task: TaskItem) => void;
+  onOpenAdaptiveCanvas: () => void;
   onClose: () => void;
 }
 
 const AgentDrawer: React.FC<AgentDrawerProps> = ({
   agentName,
-  workspaceId,
+  activeWorkspace,
+  workspaces,
+  activeView,
+  activeSection,
   nodes,
+  selectedTask,
   messages,
   input,
   isSending,
   onInputChange,
   onSend,
+  onSwitchView,
+  onSwitchSection,
+  onSwitchWorkspace,
+  onOpenTask,
+  onOpenAdaptiveCanvas,
   onClose,
-}) => (
-  <div className="td-drawer-layer">
-    <button type="button" className="td-drawer-backdrop" aria-label="Close assistant" onClick={onClose} />
-    <aside className="td-agent-drawer" aria-label={`${agentName} panel`}>
-      <header><div><span className="td-drawer-agent-icon"><Sparkles size={17} /></span><div><strong>{agentName}</strong><small><span /> AI assistant</small></div></div><button type="button" className="td-icon-button" aria-label="Close assistant" onClick={onClose}><X size={18} /></button></header>
-      <div className="td-drawer-context"><Sparkles size={15} /><span>Context from <strong>{nodes.length} project items</strong></span><ChevronDown size={14} /></div>
-      {messages.length === 0 ? (
-        <div className="td-chat-empty"><div className="td-chat-orb"><Sparkles size={22} /></div><h2>What can I help with?</h2><p>Ask a question, explore an idea, or get help moving your project forward.</p><div className="td-prompt-chips"><span>Summarize project progress</span><span>What needs attention?</span><span>Help me plan this week</span></div></div>
-      ) : (
-        <div className="td-chat-messages" aria-live="polite">
-          {messages.map((message) => (
-            <div className={`td-chat-message td-chat-${message.sender}`} key={message.id}>
-              {message.sender === 'agent' && <span className="td-chat-message-icon"><Sparkles size={13} /></span>}
-              <p>{message.text}</p>
+}) => {
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      if (input.trim() && !isSending && activeWorkspace) {
+        const fakeForm = { preventDefault: () => {} } as React.FormEvent<HTMLFormElement>;
+        onSend(fakeForm);
+      }
+    }
+  };
+
+  const formatText = (text: string) => {
+    return text.split('\n').map((line, idx) => {
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return (
+        <span key={idx} className="block min-h-[1.25em]">
+          {parts.map((part, pIdx) => {
+            if (part.startsWith('**') && part.endsWith('**')) {
+              return <strong key={pIdx} className="font-semibold text-zinc-900">{part.slice(2, -2)}</strong>;
+            }
+            return part;
+          })}
+        </span>
+      );
+    });
+  };
+
+  return (
+    <div className="td-drawer-layer">
+      <button
+        type="button"
+        className="td-drawer-backdrop"
+        aria-label="Close assistant"
+        onClick={onClose}
+      />
+      <aside className="td-agent-drawer" aria-label={`${agentName} panel`}>
+        {/* Drawer Header */}
+        <header className="td-agent-header">
+          <div className="td-agent-identity">
+            <span className="td-drawer-agent-icon">
+              <Sparkles size={16} />
+            </span>
+            <div>
+              <strong>{agentName}</strong>
+              <small>
+                <span className="td-online-dot" /> Workspace Intelligence
+              </small>
             </div>
-          ))}
-          {isSending && <div className="td-chat-typing" role="status"><span /><span /><span /> {agentName} is thinking…</div>}
+          </div>
+          <button
+            type="button"
+            className="td-icon-button"
+            aria-label="Close assistant"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </header>
+
+        {/* Live Context & Workspace Subheader */}
+        <div className="td-drawer-context">
+          <span>{activeWorkspace?.name ?? 'Workspace'}</span>
+          <span>•</span>
+          <span>{nodes.length} records in context</span>
         </div>
-      )}
-      <form className="td-chat-composer" onSubmit={onSend}>
-        <textarea
-          aria-label="Message the agent"
-          placeholder={isSending ? 'Waiting for a response…' : 'Message your agent…'}
-          value={input}
-          onChange={(event) => onInputChange(event.target.value)}
-          disabled={isSending || !workspaceId}
-        />
-        <div><button type="button" aria-label="Add attachment" disabled><Plus size={16} /></button><span>Enter to send</span><button className="td-send-button" type="submit" aria-label="Send message" disabled={!input.trim() || isSending || !workspaceId}><Send size={15} /></button></div>
-      </form>
-    </aside>
-  </div>
-);
+
+        {/* Active Target Record Banner if inspecting a task */}
+        {selectedTask && (
+          <div className="td-drawer-active-target">
+            <div className="td-active-target-info">
+              <span className="td-target-label">Focused:</span>
+              <strong className="td-target-name">{selectedTask.title}</strong>
+              <span className={`td-target-pill td-p-${selectedTask.priority}`}>
+                {selectedTask.priority}
+              </span>
+              <span className={`td-target-pill td-s-${selectedTask.status}`}>
+                {statusLabels[selectedTask.status]}
+              </span>
+            </div>
+            <button
+              type="button"
+              className="td-target-open-btn"
+              onClick={() => onOpenTask && onOpenTask(selectedTask)}
+              title="Inspect fields"
+            >
+              Inspect <ExternalLink size={11} />
+            </button>
+          </div>
+        )}
+
+        {/* Quick Tab & Workspace Navigation Toolbar */}
+        <div className="td-drawer-quick-tabs" aria-label="Views">
+          <button
+            type="button"
+            onClick={() => onSwitchView('calendar')}
+            className={`td-drawer-tab-btn ${activeSection === 'apps' && activeView === 'calendar' ? 'is-active' : ''}`}
+            title="Switch to Calendar view"
+          >
+            <CalendarDays size={13} /> Calendar
+          </button>
+          <button
+            type="button"
+            onClick={() => onSwitchView('table')}
+            className={`td-drawer-tab-btn ${activeSection === 'apps' && activeView === 'table' ? 'is-active' : ''}`}
+            title="Switch to Table view"
+          >
+            <Table2 size={13} /> Table
+          </button>
+          <button
+            type="button"
+            onClick={() => onSwitchView('board')}
+            className={`td-drawer-tab-btn ${activeSection === 'apps' && activeView === 'board' ? 'is-active' : ''}`}
+            title="Switch to Board view"
+          >
+            <LayoutGrid size={13} /> Board
+          </button>
+          <button
+            type="button"
+            onClick={() => onSwitchView('mindmap')}
+            className={`td-drawer-tab-btn ${activeSection === 'apps' && activeView === 'mindmap' ? 'is-active' : ''}`}
+            title="Switch to Mind Map view"
+          >
+            <GitBranch size={13} /> Mind Map
+          </button>
+          <button
+            type="button"
+            onClick={() => onSwitchSection('workflows')}
+            className={`td-drawer-tab-btn ${activeSection === 'workflows' ? 'is-active' : ''}`}
+            title="Open Automations Studio"
+          >
+            <Workflow size={13} /> Automations
+          </button>
+        </div>
+
+        {/* Chat Messages Body */}
+        {messages.length === 0 ? (
+          <div className="td-chat-empty">
+            <div className="td-chat-clean-icon">
+              <Bot size={22} />
+            </div>
+            <h2>How can I help with your workspace?</h2>
+            <p>
+              Ask me to open records, modify priorities, assign teammates, update statuses, or switch views.
+            </p>
+            <div className="td-prompt-chips">
+              <button
+                type="button"
+                onClick={() => onInputChange('Switch to Calendar view')}
+              >
+                <CalendarDays size={13} />
+                <span>Switch to Calendar</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onInputChange('Show Table view')}
+              >
+                <Table2 size={13} />
+                <span>Show Table</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onInputChange('Open Acme Corp Enterprise Contract Renewal')}
+              >
+                <Eye size={13} />
+                <span>Open Acme Corp</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onInputChange('Set priority of Acme Corp to Critical')}
+              >
+                <Zap size={13} />
+                <span>Set Critical Priority</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="td-chat-messages" aria-live="polite">
+            {messages.map((message) => (
+              <div
+                className={`td-chat-message td-chat-${message.sender}`}
+                key={message.id}
+              >
+                {message.sender === 'agent' ? (
+                  <div className="td-chat-agent-bubble">
+                    <span className="td-chat-message-icon">
+                      <Sparkles size={13} />
+                    </span>
+                    <div className="td-chat-agent-content">
+                      {message.actionTaken && (
+                        <div className="td-chat-action-badge">
+                          <Check size={11} />
+                          <span>{message.actionTaken}</span>
+                        </div>
+                      )}
+                      <div>{formatText(message.text)}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <p>{message.text}</p>
+                )}
+              </div>
+            ))}
+            {isSending && (
+              <div className="td-chat-typing" role="status">
+                <span />
+                <span />
+                <span />
+                <span>{agentName} is executing data operations…</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Composer */}
+        <form className="td-chat-composer" onSubmit={onSend}>
+          <textarea
+            aria-label="Message the agent"
+            placeholder={
+              isSending
+                ? 'Executing data operations…'
+                : `Ask ${agentName} (e.g. "open calendar", "create task", "set priority")…`
+            }
+            value={input}
+            onChange={(event) => onInputChange(event.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isSending || !activeWorkspace}
+          />
+
+          <div className="td-chat-composer-footer">
+            <span className="td-composer-hint">Enter to send • Shift+Enter for new line</span>
+            <button
+              className="td-send-button"
+              type="submit"
+              aria-label="Send message"
+              disabled={!input.trim() || isSending || !activeWorkspace}
+            >
+              <Send size={14} />
+            </button>
+          </div>
+        </form>
+      </aside>
+    </div>
+  );
+};
