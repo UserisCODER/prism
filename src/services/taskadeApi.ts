@@ -15,7 +15,7 @@ export interface TaskadeProjectRecord {
   id: string;
   workspace_id: string;
   name: string;
-  default_view: 'list' | 'board' | 'mindmap' | 'table' | 'calendar';
+  default_view: 'list' | 'board' | 'mindmap' | 'table' | 'calendar' | 'adaptive';
   nodes: TaskadeNodeRecord[];
 }
 

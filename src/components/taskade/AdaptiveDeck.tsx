@@ -128,7 +128,6 @@ export const AdaptiveDeck: React.FC<AdaptiveDeckProps> = ({
             <div className="td-adaptive-eyebrow">
               <Sparkles size={13} />
               <span>AI-Powered Adaptive Workspace</span>
-              <span className="td-adaptive-live-tag">Hackathon Demo Mode</span>
             </div>
             <h1 className="td-adaptive-title">
               Interface adapts to the user's goal — not the other way around.

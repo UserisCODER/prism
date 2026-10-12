@@ -5,6 +5,7 @@ import {
   ArrowUpRight,
   Bot,
   CalendarDays,
+  Bell,
   Check,
   ChevronDown,
   ChevronRight,
@@ -208,10 +209,18 @@ function toWorkflowDefinition(workflow: TaskadeWorkflowRecord): WorkflowDefiniti
 
 const TaskadeLogo: React.FC = () => (
   <span className="td-brand-mark" aria-hidden="true">
-    <span />
-    <span />
-    <span />
-    <span />
+    <svg viewBox="0 0 20 20" fill="none">
+      <defs>
+        <linearGradient id="prism-facet" x1="4" y1="3" x2="16" y2="17" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#f0e9ff" />
+          <stop offset=".48" stopColor="#a997ff" />
+          <stop offset="1" stopColor="#6d58d7" />
+        </linearGradient>
+      </defs>
+      <path d="M10 2.5 17 15.8H3L10 2.5Z" fill="url(#prism-facet)" />
+      <path d="m10 2.5 1.2 13.3M3 15.8 8.1 8.1h3.8l5.1 7.7" stroke="#fff" strokeOpacity=".72" strokeWidth=".8" />
+      <path d="m15.9 2 .45 1.25L17.6 3.7l-1.25.45-.45 1.25-.45-1.25-1.25-.45 1.25-.45L15.9 2Z" fill="#fff" />
+    </svg>
   </span>
 );
 
@@ -234,6 +243,8 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
   const [isSaving, setIsSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [showSettingsPanel, setShowSettingsPanel] = useState(false);
+  const [compactMode, setCompactMode] = useState(false);
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [showAgentBuilder, setShowAgentBuilder] = useState(false);
   const [showWorkflowBuilder, setShowWorkflowBuilder] = useState(false);
@@ -670,7 +681,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
   };
 
   return (
-    <div className={`taskade-shell ${chatAgent ? `has-agent-open is-${drawerMode}` : ''}`}>
+    <div className={`taskade-shell ${compactMode ? 'is-compact' : ''} ${chatAgent ? `has-agent-open is-${drawerMode}` : ''}`}>
       {mobileNavOpen && (
         <button
           type="button"
@@ -704,7 +715,6 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
             aria-haspopup="listbox"
             onClick={() => setWorkspaceMenuOpen((open) => !open)}
           >
-            <span className="td-workspace-avatar">{activeWorkspace?.name.slice(0, 1) ?? 'P'}</span>
             <span className="td-workspace-copy">
               <strong>{activeWorkspace?.name ?? (isLoading ? 'Loading workspace…' : 'Workspace unavailable')}</strong>
               <small>{isFallback ? 'Sample data' : 'Connected workspace'}</small>
@@ -721,7 +731,6 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
                   key={workspace.id}
                   onClick={() => void selectWorkspace(workspace)}
                 >
-                  <span className="td-workspace-avatar">{workspace.name.slice(0, 1)}</span>
                   <span><strong>{workspace.name}</strong><small>{workspace.domain ?? workspace.slug ?? 'Workspace'}</small></span>
                 </button>
               ))}
@@ -801,17 +810,19 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               Explore workspace <ArrowUpRight size={14} />
             </button>
           </div>
-          <button type="button" className="td-nav-item td-settings-link">
+          <button
+            type="button"
+            className="td-nav-item td-settings-link"
+            onClick={() => {
+              setMobileNavOpen(false);
+              setShowSettingsPanel(true);
+            }}
+          >
             <Settings2 size={17} />
             <span>Settings</span>
           </button>
         </nav>
 
-        <div className="td-user-profile">
-          <span className="td-user-avatar">MC</span>
-          <span className="td-user-copy"><strong>Morgan Carter</strong><small>Personal workspace</small></span>
-          <MoreHorizontal size={18} />
-        </div>
       </aside>
 
       <div className="td-main">
@@ -825,9 +836,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
             <Menu size={19} />
           </button>
           <div className="td-breadcrumb">
-            <span>Prism Studio</span>
-            <ChevronRight size={14} />
-            <strong>{section === 'apps' ? activeProject?.name ?? 'Projects' : section === 'agents' ? 'Agents' : 'Workflows'}</strong>
+            <strong className="td-workspace-breadcrumb">My Workspace</strong>
           </div>
           <div className="td-topbar-actions">
             <label className="td-search">
@@ -841,7 +850,7 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               <kbd><Command size={11} /> K</kbd>
             </label>
             <button type="button" className="td-icon-button td-notification" aria-label="Notifications">
-              <Activity size={17} />
+              <Bell size={17} />
               <span />
             </button>
             <button
@@ -990,6 +999,54 @@ export const TaskadeWorkspace: React.FC<TaskadeWorkspaceProps> = ({ onOpenAdapti
               <button type="submit" className="td-primary-button" disabled={!newTaskTitle.trim() || isSaving || !activeProjectId}>{isSaving ? 'Saving…' : 'Create task'} <ArrowUpRight size={15} /></button>
             </div>
           </form>
+        </div>
+      )}
+      {showSettingsPanel && (
+        <div
+          className="td-modal-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowSettingsPanel(false);
+          }}
+        >
+          <section className="td-create-modal td-settings-modal" role="dialog" aria-modal="true" aria-labelledby="workspace-settings-title">
+            <div className="td-modal-heading">
+              <div><span className="td-modal-icon"><Settings2 size={17} /></span><h2 id="workspace-settings-title">Workspace settings</h2></div>
+              <button type="button" className="td-icon-button" aria-label="Close settings" onClick={() => setShowSettingsPanel(false)}><X size={18} /></button>
+            </div>
+            <p className="td-settings-description">Adjust how PRISM looks in this browser. These preferences do not change workspace data.</p>
+            <div className="td-settings-group">
+              <h3>Workspace</h3>
+              <div className="td-settings-detail">
+                <span>Connected workspace</span>
+                <strong>{activeWorkspace?.name ?? 'Workspace unavailable'}</strong>
+              </div>
+              <div className="td-settings-detail">
+                <span>Active project</span>
+                <strong>{activeProject?.name ?? 'No project selected'}</strong>
+              </div>
+            </div>
+            <div className="td-settings-group">
+              <h3>Appearance</h3>
+              <div className="td-settings-choice-row">
+                <div><strong>Compact layout</strong><span>Reduce spacing in navigation and task lists.</span></div>
+                <button
+                  type="button"
+                  className={`td-toggle ${compactMode ? 'is-on' : ''}`}
+                  role="switch"
+                  aria-checked={compactMode}
+                  aria-label="Compact layout"
+                  onClick={() => setCompactMode((current) => !current)}
+                >
+                  <span />
+                </button>
+              </div>
+            </div>
+            <div className="td-settings-footer">
+              <span>Preferences apply locally while this workspace is open.</span>
+              <button type="button" className="td-primary-button" onClick={() => setShowSettingsPanel(false)}>Done</button>
+            </div>
+          </section>
         </div>
       )}
       {showAgentBuilder && <AgentBuilder error={apiError} isSaving={isSaving} onClose={() => setShowAgentBuilder(false)} onCreate={addAgent} />}
